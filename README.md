@@ -1,6 +1,11 @@
+# gemini link
+
+https://gemini.google.com/app/5d45b8f9b06770cd?hl=bg
+
 # Classroom Quiz App (Vite + React + Firebase)
 
 An interactive classroom quiz application with real-time response tracking, teacher presentation screen, student mobile interface, dynamic QR code joining, and wrong answer explanations.
+
 
 ## Setup Instructions
 
