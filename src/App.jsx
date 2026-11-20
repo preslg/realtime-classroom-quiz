@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     BrowserRouter,
     Routes,
@@ -9,10 +9,14 @@ import {
     useParams,
     useLocation
 } from "react-router-dom";
-import { Button, Card, Radio, Space, Tag, Typography } from "antd";
+import { Button, Card, Checkbox, Radio, Select, Space, Tag, Typography } from "antd";
 import TeacherScreen from "./components/TeacherScreen";
 import StudentScreen from "./components/StudentScreen";
-import { QUIZ_COLLECTION, DEFAULT_QUIZ } from "./data/defaultQuiz";
+import {
+    COURSES_DATA,
+    formatTopicTitle,
+    buildMultiCourseSessionQuiz
+} from "./data/coursesData";
 
 const { Title, Text } = Typography;
 
@@ -25,13 +29,21 @@ function generateRoomId(length = 6) {
     return result;
 }
 
+function createInitialCourseConfigs() {
+    return COURSES_DATA.reduce((acc, course) => {
+        acc[course.id] = { topicIndex: 0, mode: "single" };
+        return acc;
+    }, {});
+}
+
 function QuizPickerHome() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const roomFromUrl = searchParams.get("room");
-    const [selectedQuizId, setSelectedQuizId] = useState(QUIZ_COLLECTION[0].id);
 
-    // Redirect legacy/root ?room=XXXXXX links to /student?room=XXXXXX
+    const [selectedCourseIds, setSelectedCourseIds] = useState([COURSES_DATA[0].id]);
+    const [configByCourseId, setConfigByCourseId] = useState(createInitialCourseConfigs);
+
     if (roomFromUrl) {
         return (
             <Navigate
@@ -41,15 +53,36 @@ function QuizPickerHome() {
         );
     }
 
-    const selectedQuiz =
-        QUIZ_COLLECTION.find((q) => q.id === selectedQuizId) || QUIZ_COLLECTION[0];
+    const updateCourseConfig = (courseId, patch) => {
+        setConfigByCourseId((prev) => ({
+            ...prev,
+            [courseId]: {
+                ...(prev[courseId] || { topicIndex: 0, mode: "single" }),
+                ...patch
+            }
+        }));
+    };
+
+    const sessionQuiz = useMemo(
+        () =>
+            buildMultiCourseSessionQuiz(
+                COURSES_DATA,
+                selectedCourseIds,
+                configByCourseId
+            ),
+        [selectedCourseIds, configByCourseId]
+    );
 
     const handleStartSession = () => {
         const newRoomId = generateRoomId();
-        navigate(`/teacher/${newRoomId}?quizId=${selectedQuiz.id}`, {
-            state: { selectedQuiz }
+        navigate(`/teacher/${newRoomId}`, {
+            state: { selectedQuiz: sessionQuiz }
         });
     };
+
+    const selectedCourses = COURSES_DATA.filter((c) =>
+        selectedCourseIds.includes(c.id)
+    );
 
     return (
         <div
@@ -62,62 +95,160 @@ function QuizPickerHome() {
                 background: "#f0f2f5"
             }}
         >
-            <Card style={{ width: "100%", maxWidth: 560 }}>
+            <Card style={{ width: "100%", maxWidth: 680 }}>
                 <Space direction="vertical" style={{ width: "100%" }} size="large">
                     <div>
                         <Title level={3} style={{ margin: 0 }}>
-                            Select a Quiz to Start
+                            Start a Classroom Quiz
                         </Title>
                         <Text type="secondary">
-                            Choose a quiz for the classroom session and open the big screen.
+                            Select one or more courses, then choose a topic and coverage for each.
                         </Text>
                     </div>
 
-                    <Radio.Group
-                        value={selectedQuizId}
-                        onChange={(e) => setSelectedQuizId(e.target.value)}
-                        style={{ width: "100%" }}
-                    >
+                    {/* 1. Course Selection (Single or Multiple) */}
+                    <div>
+                        <Text strong style={{ display: "block", marginBottom: 8 }}>
+                            1. Select Courses
+                        </Text>
+                        <Checkbox.Group
+                            value={selectedCourseIds}
+                            onChange={(checkedValues) => setSelectedCourseIds(checkedValues)}
+                            style={{ width: "100%" }}
+                        >
+                            <Space wrap size="middle">
+                                {COURSES_DATA.map((course) => (
+                                    <Checkbox key={course.id} value={course.id}>
+                                        <Space size={6}>
+                                            <Text strong>{course.title}</Text>
+                                            <Tag color="blue">{course.subject}</Tag>
+                                        </Space>
+                                    </Checkbox>
+                                ))}
+                            </Space>
+                        </Checkbox.Group>
+                    </div>
+
+                    {/* 2. Per-Course Topic & Coverage Configuration */}
+                    {selectedCourses.length === 0 ? (
+                        <Card style={{ background: "#fffbe6", borderColor: "#ffe58f" }}>
+                            <Text type="warning">Select at least one course to configure topics.</Text>
+                        </Card>
+                    ) : (
                         <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                            {QUIZ_COLLECTION.map((quiz) => {
-                                const isSelected = quiz.id === selectedQuizId;
+                            {selectedCourses.map((course, courseIdx) => {
+                                const cfg = configByCourseId[course.id] || {
+                                    topicIndex: 0,
+                                    mode: "single"
+                                };
+
                                 return (
                                     <Card
-                                        key={quiz.id}
-                                        hoverable
-                                        onClick={() => setSelectedQuizId(quiz.id)}
-                                        bodyStyle={{ padding: 14 }}
-                                        style={{
-                                            border: isSelected ? "2px solid #1677ff" : "1px solid #d9d9d9",
-                                            background: isSelected ? "#f0f7ff" : "#fff"
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center"
-                                            }}
-                                        >
+                                        key={course.id}
+                                        size="small"
+                                        title={
                                             <Space>
-                                                <Radio value={quiz.id} />
-                                                <div>
-                                                    <div style={{ fontWeight: 600, fontSize: 15 }}>{quiz.title}</div>
-                                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                                        {quiz.questions.length} question
-                                                        {quiz.questions.length !== 1 ? "s" : ""}
-                                                    </Text>
-                                                </div>
+                                                <Text strong>
+                                                    {courseIdx + 1}. {course.title}
+                                                </Text>
+                                                <Tag>{course.subject}</Tag>
                                             </Space>
-                                            <Tag color="blue">{quiz.subject}</Tag>
-                                        </div>
+                                        }
+                                    >
+                                        <Space
+                                            direction="vertical"
+                                            style={{ width: "100%" }}
+                                            size="middle"
+                                        >
+                                            <div>
+                                                <Text
+                                                    type="secondary"
+                                                    style={{ display: "block", marginBottom: 6 }}
+                                                >
+                                                    Target Topic
+                                                </Text>
+                                                <Select
+                                                    size="large"
+                                                    value={cfg.topicIndex}
+                                                    onChange={(topicIndex) =>
+                                                        updateCourseConfig(course.id, {
+                                                            topicIndex,
+                                                            mode: topicIndex === 0 ? "single" : cfg.mode
+                                                        })
+                                                    }
+                                                    style={{ width: "100%" }}
+                                                    options={course.topics.map((topic, idx) => ({
+                                                        value: idx,
+                                                        label: `${formatTopicTitle(topic, idx)} (${topic.questions.length} Q)`
+                                                    }))}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Text
+                                                    type="secondary"
+                                                    style={{ display: "block", marginBottom: 6 }}
+                                                >
+                                                    Topic Coverage
+                                                </Text>
+                                                <Radio.Group
+                                                    value={cfg.mode}
+                                                    onChange={(e) =>
+                                                        updateCourseConfig(course.id, { mode: e.target.value })
+                                                    }
+                                                    optionType="button"
+                                                    buttonStyle="solid"
+                                                    style={{ width: "100%", display: "flex" }}
+                                                >
+                                                    <Radio.Button
+                                                        value="single"
+                                                        style={{ flex: 1, textAlign: "center" }}
+                                                    >
+                                                        Only this topic
+                                                    </Radio.Button>
+                                                    <Radio.Button
+                                                        value="cumulative"
+                                                        disabled={cfg.topicIndex === 0}
+                                                        style={{ flex: 1, textAlign: "center" }}
+                                                    >
+                                                        This topic + all previous ({cfg.topicIndex + 1})
+                                                    </Radio.Button>
+                                                </Radio.Group>
+                                            </div>
+                                        </Space>
                                     </Card>
                                 );
                             })}
                         </Space>
-                    </Radio.Group>
+                    )}
 
-                    <Button type="primary" block size="large" onClick={handleStartSession}>
+                    <div
+                        style={{
+                            padding: "10px 14px",
+                            background: "#f5f5f5",
+                            borderRadius: 8,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                        }}
+                    >
+                        <Text type="secondary">
+                            Total questions across {selectedCourses.length} course
+                            {selectedCourses.length !== 1 ? "s" : ""}:
+                        </Text>
+                        <Tag color="geekblue">
+                            {sessionQuiz.questions.length} question
+                            {sessionQuiz.questions.length !== 1 ? "s" : ""}
+                        </Tag>
+                    </div>
+
+                    <Button
+                        type="primary"
+                        block
+                        size="large"
+                        disabled={sessionQuiz.questions.length === 0}
+                        onClick={handleStartSession}
+                    >
                         Open Big Screen
                     </Button>
                 </Space>
@@ -129,13 +260,11 @@ function QuizPickerHome() {
 function TeacherRouteWrapper() {
     const { roomId } = useParams();
     const location = useLocation();
-    const [searchParams] = useSearchParams();
+    const selectedQuiz = location.state?.selectedQuiz;
 
-    const quizFromQuery = QUIZ_COLLECTION.find(
-        (q) => q.id === searchParams.get("quizId")
-    );
-    const selectedQuiz =
-        location.state?.selectedQuiz || quizFromQuery || DEFAULT_QUIZ;
+    if (!selectedQuiz) {
+        return <Navigate to="/" replace />;
+    }
 
     return <TeacherScreen roomId={roomId} selectedQuiz={selectedQuiz} />;
 }
@@ -143,6 +272,7 @@ function TeacherRouteWrapper() {
 function StudentRouteWrapper() {
     const [searchParams] = useSearchParams();
     const roomId = searchParams.get("room");
+
     if (!roomId) {
         return (
             <div style={{ padding: 40, textAlign: "center" }}>
@@ -150,6 +280,7 @@ function StudentRouteWrapper() {
             </div>
         );
     }
+
     return <StudentScreen roomId={roomId} />;
 }
 

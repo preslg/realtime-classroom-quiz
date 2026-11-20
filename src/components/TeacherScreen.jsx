@@ -15,7 +15,7 @@ import {
   Progress,
   Alert
 } from "antd";
-import { DEFAULT_QUIZ } from "../data/defaultQuiz";
+import { DEFAULT_QUIZ } from "../data/coursesData";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -109,7 +109,11 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
   };
 
   if (!roomState || !quiz || !currentQuestion) {
-    return <div style={{ padding: 40, textAlign: "center" }}>Initializing Room...</div>;
+    return (
+      <div style={{ padding: 40, textAlign: "center" }}>
+        Initializing Room...
+      </div>
+    );
   }
 
   const nextQuestion = () => {
@@ -144,7 +148,7 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
         }}
       >
         <Title level={3} style={{ color: "white", margin: 0 }}>
-          Classroom Quiz Presentation
+          {quiz.title || "Classroom Quiz Presentation"}
         </Title>
         <Space>
           <Text style={{ color: "white" }}>
@@ -174,12 +178,19 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8
                   }}
                 >
-                  <Tag color="blue">
-                    Question {currentQuestionIndex + 1} of {quiz.questions.length}
-                  </Tag>
+                  <Space>
+                    <Tag color="blue">
+                      Question {currentQuestionIndex + 1} of {quiz.questions.length}
+                    </Tag>
+                    {currentQuestion.topicTitle && (
+                      <Tag color="purple">{currentQuestion.topicTitle}</Tag>
+                    )}
+                  </Space>
                   <Text type="secondary">
                     Submissions:{" "}
                     <strong>
@@ -187,6 +198,7 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
                     </strong>
                   </Text>
                 </div>
+
                 <Progress
                   percent={
                     totalStudents > 0
