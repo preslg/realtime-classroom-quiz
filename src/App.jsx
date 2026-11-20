@@ -1,297 +1,375 @@
 import React, { useMemo, useState } from "react";
 import {
-    BrowserRouter,
-    Routes,
-    Route,
-    Navigate,
-    useNavigate,
-    useSearchParams,
-    useParams,
-    useLocation
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useSearchParams,
+  useParams,
+  useLocation
 } from "react-router-dom";
-import { Button, Card, Checkbox, Radio, Select, Space, Tag, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Divider,
+  Radio,
+  Select,
+  Space,
+  Tag,
+  Typography
+} from "antd";
 import TeacherScreen from "./components/TeacherScreen";
 import StudentScreen from "./components/StudentScreen";
 import {
-    COURSES_DATA,
-    formatTopicTitle,
-    buildMultiCourseSessionQuiz
+  COURSES_DATA,
+  formatTopicTitle,
+  buildSessionQuiz
 } from "./data/coursesData";
 
 const { Title, Text } = Typography;
 
 function generateRoomId(length = 6) {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let result = "";
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
-function createInitialCourseConfigs() {
-    return COURSES_DATA.reduce((acc, course) => {
-        acc[course.id] = { topicIndex: 0, mode: "single" };
-        return acc;
-    }, {});
+function buildCombinedQuizFromSelections(selections) {
+  const questions = [];
+  const titleParts = [];
+
+  selections.forEach((sel, idx) => {
+    const course =
+      COURSES_DATA.find((c) => c.id === sel.courseId) || COURSES_DATA[0];
+    const singleQuiz = buildSessionQuiz(course, sel.topicIndex, sel.mode);
+    titleParts.push(singleQuiz.title);
+    singleQuiz.questions.forEach((q, qIdx) => {
+      questions.push({
+        ...q,
+        id: `${course.id}_${idx}_${q.id || qIdx}`
+      });
+    });
+  });
+
+  const subjects = Array.from(
+    new Set(
+      selections.map((sel) => {
+        const course = COURSES_DATA.find((c) => c.id === sel.courseId);
+        return course?.subject || "General";
+      })
+    )
+  );
+
+  return {
+    id: `session__${Date.now()}`,
+    title:
+      titleParts.length > 0 ? titleParts.join(" + ") : "Classroom Quiz Session",
+    subject: subjects.join(" & "),
+    questions
+  };
 }
 
 function QuizPickerHome() {
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const roomFromUrl = searchParams.get("room");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const roomFromUrl = searchParams.get("room");
 
-    const [selectedCourseIds, setSelectedCourseIds] = useState([COURSES_DATA[0].id]);
-    const [configByCourseId, setConfigByCourseId] = useState(createInitialCourseConfigs);
+  // Only items added via "Add Course" become part of the session quiz
+  const [addedSelections, setAddedSelections] = useState([]);
 
-    if (roomFromUrl) {
-        return (
-            <Navigate
-                to={`/student?room=${encodeURIComponent(roomFromUrl)}`}
-                replace
-            />
-        );
-    }
+  // Current course/topic configuration form
+  const [currentCourseId, setCurrentCourseId] = useState(COURSES_DATA[0].id);
+  const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
+  const [currentMode, setCurrentMode] = useState("single"); // "single" | "cumulative"
 
-    const updateCourseConfig = (courseId, patch) => {
-        setConfigByCourseId((prev) => ({
-            ...prev,
-            [courseId]: {
-                ...(prev[courseId] || { topicIndex: 0, mode: "single" }),
-                ...patch
-            }
-        }));
-    };
-
-    const sessionQuiz = useMemo(
-        () =>
-            buildMultiCourseSessionQuiz(
-                COURSES_DATA,
-                selectedCourseIds,
-                configByCourseId
-            ),
-        [selectedCourseIds, configByCourseId]
-    );
-
-    const handleStartSession = () => {
-        const newRoomId = generateRoomId();
-        navigate(`/teacher/${newRoomId}`, {
-            state: { selectedQuiz: sessionQuiz }
-        });
-    };
-
-    const selectedCourses = COURSES_DATA.filter((c) =>
-        selectedCourseIds.includes(c.id)
-    );
-
+  if (roomFromUrl) {
     return (
-        <div
-            style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "100vh",
-                padding: 24,
-                background: "#f0f2f5"
-            }}
-        >
-            <Card style={{ width: "100%", maxWidth: 680 }}>
-                <Space direction="vertical" style={{ width: "100%" }} size="large">
-                    <div>
-                        <Title level={3} style={{ margin: 0 }}>
-                            Start a Classroom Quiz
-                        </Title>
-                        <Text type="secondary">
-                            Select one or more courses, then choose a topic and coverage for each.
-                        </Text>
-                    </div>
-
-                    {/* 1. Course Selection (Single or Multiple) */}
-                    <div>
-                        <Text strong style={{ display: "block", marginBottom: 8 }}>
-                            1. Select Courses
-                        </Text>
-                        <Checkbox.Group
-                            value={selectedCourseIds}
-                            onChange={(checkedValues) => setSelectedCourseIds(checkedValues)}
-                            style={{ width: "100%" }}
-                        >
-                            <Space wrap size="middle">
-                                {COURSES_DATA.map((course) => (
-                                    <Checkbox key={course.id} value={course.id}>
-                                        <Space size={6}>
-                                            <Text strong>{course.title}</Text>
-                                            <Tag color="blue">{course.subject}</Tag>
-                                        </Space>
-                                    </Checkbox>
-                                ))}
-                            </Space>
-                        </Checkbox.Group>
-                    </div>
-
-                    {/* 2. Per-Course Topic & Coverage Configuration */}
-                    {selectedCourses.length === 0 ? (
-                        <Card style={{ background: "#fffbe6", borderColor: "#ffe58f" }}>
-                            <Text type="warning">Select at least one course to configure topics.</Text>
-                        </Card>
-                    ) : (
-                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                            {selectedCourses.map((course, courseIdx) => {
-                                const cfg = configByCourseId[course.id] || {
-                                    topicIndex: 0,
-                                    mode: "single"
-                                };
-
-                                return (
-                                    <Card
-                                        key={course.id}
-                                        size="small"
-                                        title={
-                                            <Space>
-                                                <Text strong>
-                                                    {courseIdx + 1}. {course.title}
-                                                </Text>
-                                                <Tag>{course.subject}</Tag>
-                                            </Space>
-                                        }
-                                    >
-                                        <Space
-                                            direction="vertical"
-                                            style={{ width: "100%" }}
-                                            size="middle"
-                                        >
-                                            <div>
-                                                <Text
-                                                    type="secondary"
-                                                    style={{ display: "block", marginBottom: 6 }}
-                                                >
-                                                    Target Topic
-                                                </Text>
-                                                <Select
-                                                    size="large"
-                                                    value={cfg.topicIndex}
-                                                    onChange={(topicIndex) =>
-                                                        updateCourseConfig(course.id, {
-                                                            topicIndex,
-                                                            mode: topicIndex === 0 ? "single" : cfg.mode
-                                                        })
-                                                    }
-                                                    style={{ width: "100%" }}
-                                                    options={course.topics.map((topic, idx) => ({
-                                                        value: idx,
-                                                        label: `${formatTopicTitle(topic, idx)} (${topic.questions.length} Q)`
-                                                    }))}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Text
-                                                    type="secondary"
-                                                    style={{ display: "block", marginBottom: 6 }}
-                                                >
-                                                    Topic Coverage
-                                                </Text>
-                                                <Radio.Group
-                                                    value={cfg.mode}
-                                                    onChange={(e) =>
-                                                        updateCourseConfig(course.id, { mode: e.target.value })
-                                                    }
-                                                    optionType="button"
-                                                    buttonStyle="solid"
-                                                    style={{ width: "100%", display: "flex" }}
-                                                >
-                                                    <Radio.Button
-                                                        value="single"
-                                                        style={{ flex: 1, textAlign: "center" }}
-                                                    >
-                                                        Only this topic
-                                                    </Radio.Button>
-                                                    <Radio.Button
-                                                        value="cumulative"
-                                                        disabled={cfg.topicIndex === 0}
-                                                        style={{ flex: 1, textAlign: "center" }}
-                                                    >
-                                                        This topic + all previous ({cfg.topicIndex + 1})
-                                                    </Radio.Button>
-                                                </Radio.Group>
-                                            </div>
-                                        </Space>
-                                    </Card>
-                                );
-                            })}
-                        </Space>
-                    )}
-
-                    <div
-                        style={{
-                            padding: "10px 14px",
-                            background: "#f5f5f5",
-                            borderRadius: 8,
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center"
-                        }}
-                    >
-                        <Text type="secondary">
-                            Total questions across {selectedCourses.length} course
-                            {selectedCourses.length !== 1 ? "s" : ""}:
-                        </Text>
-                        <Tag color="geekblue">
-                            {sessionQuiz.questions.length} question
-                            {sessionQuiz.questions.length !== 1 ? "s" : ""}
-                        </Tag>
-                    </div>
-
-                    <Button
-                        type="primary"
-                        block
-                        size="large"
-                        disabled={sessionQuiz.questions.length === 0}
-                        onClick={handleStartSession}
-                    >
-                        Open Big Screen
-                    </Button>
-                </Space>
-            </Card>
-        </div>
+      <Navigate
+        to={`/student?room=${encodeURIComponent(roomFromUrl)}`}
+        replace
+      />
     );
+  }
+
+  const currentCourse =
+    COURSES_DATA.find((c) => c.id === currentCourseId) || COURSES_DATA[0];
+
+  const currentPreviewQuiz = useMemo(
+    () => buildSessionQuiz(currentCourse, currentTopicIndex, currentMode),
+    [currentCourse, currentTopicIndex, currentMode]
+  );
+
+  const combinedQuiz = useMemo(
+    () => buildCombinedQuizFromSelections(addedSelections),
+    [addedSelections]
+  );
+
+  const handleCourseChange = (courseId) => {
+    setCurrentCourseId(courseId);
+    setCurrentTopicIndex(0);
+    setCurrentMode("single");
+  };
+
+  const handleTopicChange = (topicIndex) => {
+    setCurrentTopicIndex(topicIndex);
+    if (topicIndex === 0) {
+      setCurrentMode("single");
+    }
+  };
+
+  const handleAddCourse = () => {
+    if (currentPreviewQuiz.questions.length === 0) return;
+
+    setAddedSelections((prev) => [
+      ...prev,
+      {
+        courseId: currentCourse.id,
+        topicIndex: currentTopicIndex,
+        mode: currentMode
+      }
+    ]);
+  };
+
+  const handleRemoveSelection = (indexToRemove) => {
+    setAddedSelections((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleStartBigScreen = () => {
+    if (addedSelections.length === 0 || combinedQuiz.questions.length === 0) {
+      return;
+    }
+    const newRoomId = generateRoomId();
+    navigate(`/teacher/${newRoomId}`, {
+      state: { selectedQuiz: combinedQuiz }
+    });
+  };
+
+  const canStartBigScreen =
+    addedSelections.length > 0 && combinedQuiz.questions.length > 0;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        padding: 24,
+        background: "#f0f2f5"
+      }}
+    >
+      <Card style={{ width: "100%", maxWidth: 640 }}>
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <div>
+            <Title level={3} style={{ margin: 0 }}>
+              Build Classroom Quiz
+            </Title>
+            <Text type="secondary">
+              Configure a course and topic, click Add Course, then click Start Big Screen.
+            </Text>
+          </div>
+
+          {/* Step 1: Course */}
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              1. Select Course
+            </Text>
+            <Select
+              size="large"
+              value={currentCourse.id}
+              onChange={handleCourseChange}
+              style={{ width: "100%" }}
+              options={COURSES_DATA.map((course) => ({
+                value: course.id,
+                label: `${course.title} (${course.subject})`
+              }))}
+            />
+          </div>
+
+          {/* Step 2: Topic */}
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              2. Select Topic
+            </Text>
+            <Select
+              size="large"
+              value={currentTopicIndex}
+              onChange={handleTopicChange}
+              style={{ width: "100%" }}
+              options={currentCourse.topics.map((topic, idx) => ({
+                value: idx,
+                label: `${formatTopicTitle(topic, idx)} (${topic.questions.length} Q)`
+              }))}
+            />
+          </div>
+
+          {/* Step 3: Single vs. Cumulative */}
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              3. Topic Scope
+            </Text>
+            <Radio.Group
+              value={currentMode}
+              onChange={(e) => setCurrentMode(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+              style={{ width: "100%", display: "flex" }}
+            >
+              <Radio.Button
+                value="single"
+                style={{ flex: 1, textAlign: "center" }}
+              >
+                Only this topic
+              </Radio.Button>
+              <Radio.Button
+                value="cumulative"
+                disabled={currentTopicIndex === 0}
+                style={{ flex: 1, textAlign: "center" }}
+              >
+                This topic + all previous ({currentTopicIndex + 1})
+              </Radio.Button>
+            </Radio.Group>
+          </div>
+
+          {/* Add Course Action */}
+          <Button
+            size="large"
+            block
+            disabled={currentPreviewQuiz.questions.length === 0}
+            onClick={handleAddCourse}
+          >
+            Add Course ({currentPreviewQuiz.questions.length} Q)
+          </Button>
+
+          {/* Added Courses List */}
+          <div>
+            <Divider style={{ margin: "4px 0 16px" }} />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8
+              }}
+            >
+              <Text strong>Added Courses ({addedSelections.length})</Text>
+              <Tag color={canStartBigScreen ? "geekblue" : "default"}>
+                {combinedQuiz.questions.length} total question
+                {combinedQuiz.questions.length !== 1 ? "s" : ""}
+              </Tag>
+            </div>
+
+            {addedSelections.length === 0 ? (
+              <Card size="small" style={{ background: "#fafafa" }}>
+                <Text type="secondary">
+                  No courses added yet. Click &ldquo;Add Course&rdquo; above to enable Start Big Screen.
+                </Text>
+              </Card>
+            ) : (
+              <Space direction="vertical" style={{ width: "100%" }} size="small">
+                {addedSelections.map((sel, idx) => {
+                  const course =
+                    COURSES_DATA.find((c) => c.id === sel.courseId) ||
+                    COURSES_DATA[0];
+                  const subQuiz = buildSessionQuiz(
+                    course,
+                    sel.topicIndex,
+                    sel.mode
+                  );
+                  return (
+                    <Card
+                      key={`${sel.courseId}-${sel.topicIndex}-${sel.mode}-${idx}`}
+                      size="small"
+                      style={{ background: "#fafafa" }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 8
+                        }}
+                      >
+                        <div>
+                          <Text strong>{subQuiz.title}</Text>
+                          <div>
+                            <Tag color="blue" style={{ marginTop: 4 }}>
+                              {subQuiz.questions.length} question
+                              {subQuiz.questions.length !== 1 ? "s" : ""}
+                            </Tag>
+                          </div>
+                        </div>
+                        <Button
+                          size="small"
+                          danger
+                          type="text"
+                          onClick={() => handleRemoveSelection(idx)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </Space>
+            )}
+          </div>
+
+          {/* Start Big Screen (disabled until at least one course is added) */}
+          <Button
+            type="primary"
+            block
+            size="large"
+            disabled={!canStartBigScreen}
+            onClick={handleStartBigScreen}
+          >
+            Start Big Screen
+          </Button>
+        </Space>
+      </Card>
+    </div>
+  );
 }
 
 function TeacherRouteWrapper() {
-    const { roomId } = useParams();
-    const location = useLocation();
-    const selectedQuiz = location.state?.selectedQuiz;
+  const { roomId } = useParams();
+  const location = useLocation();
+  const selectedQuiz = location.state?.selectedQuiz;
 
-    if (!selectedQuiz) {
-        return <Navigate to="/" replace />;
-    }
+  if (!selectedQuiz) {
+    return <Navigate to="/" replace />;
+  }
 
-    return <TeacherScreen roomId={roomId} selectedQuiz={selectedQuiz} />;
+  return <TeacherScreen roomId={roomId} selectedQuiz={selectedQuiz} />;
 }
 
 function StudentRouteWrapper() {
-    const [searchParams] = useSearchParams();
-    const roomId = searchParams.get("room");
+  const [searchParams] = useSearchParams();
+  const roomId = searchParams.get("room");
 
-    if (!roomId) {
-        return (
-            <div style={{ padding: 40, textAlign: "center" }}>
-                Missing room code. Please scan the QR code shown by your teacher.
-            </div>
-        );
-    }
+  if (!roomId) {
+    return (
+      <div style={{ padding: 40, textAlign: "center" }}>
+        Missing room code. Please scan the QR code shown by your teacher.
+      </div>
+    );
+  }
 
-    return <StudentScreen roomId={roomId} />;
+  return <StudentScreen roomId={roomId} />;
 }
 
 export default function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<QuizPickerHome />} />
-                <Route path="/student" element={<StudentRouteWrapper />} />
-                <Route path="/teacher/:roomId" element={<TeacherRouteWrapper />} />
-            </Routes>
-        </BrowserRouter>
-    );
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<QuizPickerHome />} />
+        <Route path="/student" element={<StudentRouteWrapper />} />
+        <Route path="/teacher/:roomId" element={<TeacherRouteWrapper />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
