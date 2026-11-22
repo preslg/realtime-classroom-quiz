@@ -46,7 +46,7 @@ export default function StudentScreen({ roomId }) {
     }, [joined, roomId, studentId]);
 
     const submitAnswer = (optionId) => {
-        if (roomState?.isRevealed) return;
+        if (roomState?.isRevealed || !roomState?.currentQuestion) return;
         setSelectedOptionId(optionId);
         const answerRef = ref(
             db,
@@ -55,7 +55,7 @@ export default function StudentScreen({ roomId }) {
         set(answerRef, { selectedOptionId: optionId, timestamp: Date.now() });
     };
 
-    if (!joined || !roomState || !roomState.quiz) {
+    if (!joined || !roomState || !roomState.currentQuestion) {
         return (
             <div style={{ padding: 40, textAlign: "center" }}>
                 Waiting for room...
@@ -63,21 +63,17 @@ export default function StudentScreen({ roomId }) {
         );
     }
 
-    const { quiz, currentQuestionIndex, isRevealed } = roomState;
-    const currentQuestion = quiz.questions[currentQuestionIndex];
-
-    if (!currentQuestion) {
-        return (
-            <div style={{ padding: 40, textAlign: "center" }}>
-                Loading question...
-            </div>
-        );
-    }
+    const {
+        currentQuestion,
+        currentQuestionIndex = 0,
+        totalQuestions = 1,
+        isRevealed = false
+    } = roomState;
 
     return (
         <div style={{ padding: 16, maxWidth: 500, margin: "0 auto", paddingBottom: 40 }}>
             <NoticeBar
-                content={`Connected as ${studentId} | Question ${currentQuestionIndex + 1} of ${quiz.questions.length}`}
+                content={`Connected as ${studentId} | Question ${currentQuestionIndex + 1} of ${totalQuestions}`}
                 color="info"
             />
 

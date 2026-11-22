@@ -1,0 +1,18 @@
+https://share.google/aimode/ZmCGhk2xmCUNSEcdI
+
+Supabase is the better choice for a Kahoot-style exam app because your data is relational (teachers, subjects, classes, exams, and questions) while also needing fast real-time events for live gameplay.
+
+Why Supabase Fits Your App
+
+• Structured Organization: Sorting and filtering exams by teacher_id, subject_id, and class_id is native and clean in PostgreSQL. Doing complex multi-attribute filtering and reporting in Firebase's NoSQL structure requires heavy data duplication.
+• Live Game Mechanics: You can use Supabase Broadcast to push the "Next Question" event to all students simultaneously with low latency, and Presence to display the live lobby of students waiting to join.
+• Answer Submissions & Leaderboards: Students can insert their answers into a submissions table, while Postgres Changes (or a calculated database view/function) updates the teacher's live scoreboard.
+• Security: Row-Level Security (RLS) ensures students can only read the current active question and cannot query the database ahead of time for the correct answers.
+
+Basic Database Architecture
+
+1. Static Content Tables: teachers, subjects, classes, exams, questions, and options (linked via foreign keys for easy sorting and filtering).
+2. Live Session Tables: game_sessions (stores the room PIN, current question index, and status like waiting, active, or finished) and player_answers (records student choices and response times).
+Would you like:
+A PostgreSQL table schema (SQL) to set up the teachers, classes, subjects, and live game tablesA code example showing how to sync the live questions using Supabase RealtimeAdvice on preventing cheating (hiding correct answers from the student client until the timer ends)
+Let me know which part you want to tackle first.
