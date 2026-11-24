@@ -140,12 +140,6 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
         }
     };
 
-    const prevQuestion = () => {
-        if (currentQuestionIndex > 0) {
-            syncQuestionToRoom(currentQuestionIndex - 1, false);
-        }
-    };
-
     const joinUrl = `${window.location.origin}/student?room=${roomId}`;
 
     return (
@@ -160,12 +154,9 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
                 }}
             >
                 <Title level={3} style={{ color: "white", margin: 0 }}>
-                    {quiz.title || "Classroom Quiz Presentation"}
+                    Quiz
                 </Title>
                 <Space>
-                    <Text style={{ color: "white" }}>
-                        Room ID: <strong>{roomId}</strong>
-                    </Text>
                     <Tag color="green" style={{ fontSize: 14, padding: "4px 10px" }}>
                         {totalStudents} Student{totalStudents !== 1 ? "s" : ""} Connected
                     </Tag>
@@ -285,13 +276,9 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
                         <Card style={{ marginTop: 24 }}>
                             <Row justify="space-between" align="middle">
                                 <Col>
-                                    <Button disabled={currentQuestionIndex === 0} onClick={prevQuestion}>
-                                        Previous
-                                    </Button>
                                     <Button
                                         disabled={currentQuestionIndex === quiz.questions.length - 1}
                                         onClick={nextQuestion}
-                                        style={{ marginLeft: 8 }}
                                     >
                                         Next Question
                                     </Button>

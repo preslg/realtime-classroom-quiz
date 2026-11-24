@@ -4,6 +4,16 @@ import { db } from "../firebase";
 import { Card, Space, NoticeBar, Tag } from "antd-mobile";
 import { CheckCircleOutline, CloseCircleOutline } from "antd-mobile-icons";
 
+const statusTagStyle = {
+    padding: "8px 16px",
+    fontSize: "14px",
+    height: "auto",
+    lineHeight: 1.4,
+    whiteSpace: "normal",
+    maxWidth: "100%",
+    display: "inline-block"
+};
+
 export default function StudentScreen({ roomId }) {
     const [studentId] = useState(
         () => "student_" + Math.random().toString(36).substring(2, 11)
@@ -21,7 +31,7 @@ export default function StudentScreen({ roomId }) {
         setJoined(true);
     }, [roomId, studentId]);
 
-    // Listen for Live Updates
+    // Listen for live updates from the room
     useEffect(() => {
         if (!joined) return;
         const roomRef = ref(db, `rooms/${roomId}`);
@@ -32,11 +42,7 @@ export default function StudentScreen({ roomId }) {
 
                 const currentQIdx = data.currentQuestionIndex;
                 const myAnswer = data.answers?.[currentQIdx]?.[studentId];
-                if (myAnswer) {
-                    setSelectedOptionId(myAnswer.selectedOptionId);
-                } else {
-                    setSelectedOptionId(null);
-                }
+                setSelectedOptionId(myAnswer ? myAnswer.selectedOptionId : null);
             } else {
                 setRoomState(null);
             }
@@ -71,14 +77,45 @@ export default function StudentScreen({ roomId }) {
     } = roomState;
 
     return (
-        <div style={{ padding: 16, maxWidth: 500, margin: "0 auto", paddingBottom: 40 }}>
+        <div
+            style={{
+                padding: 16,
+                maxWidth: 500,
+                margin: "0 auto",
+                paddingBottom: 40,
+                boxSizing: "border-box"
+            }}
+        >
             <NoticeBar
-                content={`Connected as ${studentId} | Question ${currentQuestionIndex + 1} of ${totalQuestions}`}
+                icon={null}
+                content={
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                            lineHeight: 1.4
+                        }}
+                    >
+                        <span>
+                            Connected as <strong>{studentId}</strong>
+                        </span>
+                        <span>
+                            Question {currentQuestionIndex + 1} of {totalQuestions}
+                        </span>
+                    </div>
+                }
                 color="info"
+                style={{
+                    "--height": "auto",
+                    padding: "10px 12px"
+                }}
             />
 
             <Card style={{ marginTop: 16 }}>
-                <h2>{currentQuestion.question}</h2>
+                <h2 style={{ margin: 0, overflowWrap: "anywhere" }}>
+                    {currentQuestion.question}
+                </h2>
             </Card>
 
             <div style={{ marginTop: 16 }}>
@@ -91,7 +128,8 @@ export default function StudentScreen({ roomId }) {
                             borderRadius: "8px",
                             border: "1px solid #e5e5e5",
                             background: "#fff",
-                            cursor: isRevealed ? "default" : "pointer"
+                            cursor: isRevealed ? "default" : "pointer",
+                            boxSizing: "border-box"
                         };
 
                         if (isSelected) {
@@ -119,19 +157,21 @@ export default function StudentScreen({ roomId }) {
                                     style={{
                                         display: "flex",
                                         justifyContent: "space-between",
-                                        alignItems: "center"
+                                        alignItems: "center",
+                                        gap: 8
                                     }}
                                 >
                                     <span
                                         style={{
                                             fontSize: "16px",
-                                            fontWeight: isSelected ? "bold" : "normal"
+                                            fontWeight: isSelected ? "bold" : "normal",
+                                            overflowWrap: "anywhere"
                                         }}
                                     >
                                         {opt.text}
                                     </span>
                                     {isRevealed && (
-                                        <span>
+                                        <span style={{ flexShrink: 0 }}>
                                             {opt.isCorrect && (
                                                 <Tag color="success">
                                                     <CheckCircleOutline /> Correct
@@ -146,7 +186,6 @@ export default function StudentScreen({ roomId }) {
                                     )}
                                 </div>
 
-                                {/* Wrong Answer Explanation Viewable by Student */}
                                 {isRevealed && !opt.isCorrect && opt.explanation && (
                                     <div
                                         style={{
@@ -156,7 +195,8 @@ export default function StudentScreen({ roomId }) {
                                             border: "1px solid #ffe58f",
                                             borderRadius: "6px",
                                             fontSize: "13px",
-                                            color: "#d48806"
+                                            color: "#d48806",
+                                            overflowWrap: "anywhere"
                                         }}
                                     >
                                         <strong>Why wrong:</strong> {opt.explanation}
@@ -170,27 +210,15 @@ export default function StudentScreen({ roomId }) {
 
             <div style={{ marginTop: 24, textAlign: "center" }}>
                 {isRevealed ? (
-                    <Tag
-                        color="warning"
-                        fill="outline"
-                        style={{ padding: "8px 16px", fontSize: "14px" }}
-                    >
+                    <Tag color="warning" fill="outline" style={statusTagStyle}>
                         Waiting for next question...
                     </Tag>
                 ) : selectedOptionId ? (
-                    <Tag
-                        color="primary"
-                        fill="outline"
-                        style={{ padding: "8px 16px", fontSize: "14px" }}
-                    >
+                    <Tag color="primary" fill="outline" style={statusTagStyle}>
                         Answer submitted! You can change it until answers are revealed.
                     </Tag>
                 ) : (
-                    <Tag
-                        color="default"
-                        fill="outline"
-                        style={{ padding: "8px 16px", fontSize: "14px" }}
-                    >
+                    <Tag color="default" fill="outline" style={statusTagStyle}>
                         Select an answer above
                     </Tag>
                 )}

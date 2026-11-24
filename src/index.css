@@ -1,5 +1,19 @@
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #f0f2f5;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f0f2f5;
+}
+
+.adm-notice-bar {
+    height: auto !important;
+}
+
+.adm-notice-bar-content {
+    overflow: visible;
+}
+
+.adm-notice-bar-content-inner {
+    transform: translateX(0px) !important;
+    animation: none !important;
+    white-space: normal !important;
 }
