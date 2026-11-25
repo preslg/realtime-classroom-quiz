@@ -32,14 +32,23 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
     const navigate = useNavigate();
     const [roomState, setRoomState] = useState(null);
     const [endingSession, setEndingSession] = useState(false);
-    const [isMobile, setIsMobile] = useState(() =>
-        typeof window !== "undefined" ? window.innerWidth <= 576 : false
-    );
     const isClosingRef = useRef(false);
 
     const quiz = selectedQuiz;
     const currentQuestionIndex = roomState?.currentQuestionIndex ?? 0;
     const isRevealed = roomState?.isRevealed ?? false;
+
+    const syncQuestionToRoom = async (qIndex, revealFlag) => {
+        const question = quiz?.questions?.[qIndex];
+        if (!question) return;
+
+        await update(ref(db, `rooms/${roomId}`), {
+            currentQuestionIndex: qIndex,
+            isRevealed: revealFlag,
+            currentQuestion: buildStudentQuestion(question, revealFlag),
+            lastActiveAt: serverTimestamp()
+        });
+    };
 
     // Initialize sanitized room state & keep server-side disconnect cleanup armed on connect/reconnect
     useEffect(() => {
@@ -155,6 +164,39 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
 
     return (
         <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
+            <style>{`
+        .topic-question-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .topic-question-tags {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 8px;
+        }
+
+        @media (max-width: 576px) {
+          .topic-question-bar {
+            align-items: flex-start;
+          }
+
+          .topic-question-tags {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .topic-question-tags .adm-tag {
+            white-space: normal;
+            height: auto;
+          }
+        }
+      `}</style>
+
             <Header
                 style={{
                     background: "#001529",
@@ -188,23 +230,8 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
                     <Col xs={24} md={16}>
                         <Card style={{ marginBottom: 16 }}>
                             <Space direction="vertical" style={{ width: "100%" }}>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: isMobile ? "flex-start" : "center",
-                                        flexWrap: "wrap",
-                                        gap: 8
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            flexDirection: isMobile ? "column" : "row",
-                                            alignItems: isMobile ? "flex-start" : "center",
-                                            gap: 8
-                                        }}
-                                    >
+                                <div className="topic-question-bar">
+                                    <div className="topic-question-tags">
                                         {currentQuestion.topicTitle && (
                                             <Tag color="purple">{currentQuestion.topicTitle}</Tag>
                                         )}
