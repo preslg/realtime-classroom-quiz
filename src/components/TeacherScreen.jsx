@@ -1,26 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ref,
-  onValue,
-  update,
-  set,
-  onDisconnect,
-  serverTimestamp
+    ref,
+    onValue,
+    update,
+    set,
+    onDisconnect,
+    serverTimestamp
 } from "firebase/database";
 import { db } from "../firebase";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  Card,
-  Button,
-  Tag,
-  Space,
-  Typography,
-  Layout,
-  Row,
-  Col,
-  Progress,
-  Alert
+    Card,
+    Button,
+    Tag,
+    Space,
+    Typography,
+    Layout,
+    Row,
+    Col,
+    Progress,
+    Alert
 } from "antd";
 import { DEFAULT_QUIZ } from "../data/coursesData";
 import { buildStudentQuestion } from "../utils/sanitizeQuestion";
@@ -29,349 +29,349 @@ const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
-  const navigate = useNavigate();
-  const [roomState, setRoomState] = useState(null);
-  const [endingSession, setEndingSession] = useState(false);
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth <= 576 : false
-  );
-  const isClosingRef = useRef(false);
-
-  const quiz = selectedQuiz;
-  const currentQuestionIndex = roomState?.currentQuestionIndex ?? 0;
-  const isRevealed = roomState?.isRevealed ?? false;
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 576px)");
-    const updateViewport = () => setIsMobile(mediaQuery.matches);
-    updateViewport();
-
-    mediaQuery.addEventListener("change", updateViewport);
-    return () => mediaQuery.removeEventListener("change", updateViewport);
-  }, []);
-
-  const syncQuestionToRoom = async (qIndex, revealFlag) => {
-    const question = quiz?.questions?.[qIndex];
-    if (!question) return;
-
-    await update(ref(db, `rooms/${roomId}`), {
-      currentQuestionIndex: qIndex,
-      isRevealed: revealFlag,
-      currentQuestion: buildStudentQuestion(question, revealFlag),
-      lastActiveAt: serverTimestamp()
-    });
-  };
-
-  // Initialize sanitized room state & register server-side disconnect cleanup
-  useEffect(() => {
-    isClosingRef.current = false;
-    const roomRef = ref(db, `rooms/${roomId}`);
-    const disconnectRef = onDisconnect(roomRef);
-
-    disconnectRef.remove().catch((err) => console.error("onDisconnect error:", err));
-
-    const unsubscribe = onValue(roomRef, (snapshot) => {
-      if (isClosingRef.current) return;
-
-      if (!snapshot.exists()) {
-        const firstQuestion = quiz.questions[0];
-        const initialData = {
-          title: quiz.title,
-          subject: quiz.subject,
-          totalQuestions: quiz.questions.length,
-          currentQuestionIndex: 0,
-          isRevealed: false,
-          currentQuestion: buildStudentQuestion(firstQuestion, false),
-          lastActiveAt: serverTimestamp(),
-          students: {},
-          answers: []
-        };
-        set(roomRef, initialData).catch((err) => console.error("Init room error:", err));
-      } else {
-        setRoomState(snapshot.val());
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [roomId, quiz]);
-
-  const students = roomState?.students || {};
-  const answers = roomState?.answers || {};
-
-  const connectedStudentList = Object.entries(students);
-  const totalStudents = connectedStudentList.length;
-
-  const currentQuestion = quiz ? quiz.questions[currentQuestionIndex] : null;
-  const currentQuestionAnswers = answers[currentQuestionIndex] || {};
-  const answeredCount = Object.keys(currentQuestionAnswers).length;
-
-  const revealAnswers = () => {
-    if (!currentQuestion) return;
-    syncQuestionToRoom(currentQuestionIndex, true);
-  };
-
-  // Auto-reveal when all connected students have submitted an answer
-  useEffect(() => {
-    if (totalStudents > 0 && answeredCount >= totalStudents && !isRevealed) {
-      revealAnswers();
-    }
-  }, [answeredCount, totalStudents, isRevealed]);
-
-  const handleEndSession = async () => {
-    if (endingSession || isClosingRef.current) return;
-    isClosingRef.current = true;
-    setEndingSession(true);
-
-    const roomRef = ref(db, `rooms/${roomId}`);
-    const disconnectRef = onDisconnect(roomRef);
-
-    try {
-      await disconnectRef.cancel();
-      await set(roomRef, null);
-    } catch (err) {
-      console.error("Failed to remove room:", err);
-    } finally {
-      navigate("/");
-    }
-  };
-
-  if (!roomState || !quiz || !currentQuestion) {
-    return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        Initializing Room...
-      </div>
+    const navigate = useNavigate();
+    const [roomState, setRoomState] = useState(null);
+    const [endingSession, setEndingSession] = useState(false);
+    const [isMobile, setIsMobile] = useState(() =>
+        typeof window !== "undefined" ? window.innerWidth <= 576 : false
     );
-  }
+    const isClosingRef = useRef(false);
 
-  const nextQuestion = () => {
-    if (currentQuestionIndex < quiz.questions.length - 1) {
-      syncQuestionToRoom(currentQuestionIndex + 1, false);
+    const quiz = selectedQuiz;
+    const currentQuestionIndex = roomState?.currentQuestionIndex ?? 0;
+    const isRevealed = roomState?.isRevealed ?? false;
+
+    // Initialize sanitized room state & keep server-side disconnect cleanup armed on connect/reconnect
+    useEffect(() => {
+        isClosingRef.current = false;
+        const roomRef = ref(db, `rooms/${roomId}`);
+        const connectedRef = ref(db, ".info/connected");
+        const disconnectRef = onDisconnect(roomRef);
+
+        const armDisconnect = () => {
+            if (isClosingRef.current) return Promise.resolve();
+            return disconnectRef
+                .remove()
+                .catch((err) => console.error("onDisconnect error:", err));
+        };
+
+        armDisconnect();
+
+        const unsubscribeConnected = onValue(connectedRef, (snap) => {
+            if (snap.val() === true && !isClosingRef.current) {
+                armDisconnect();
+            }
+        });
+
+        const unsubscribeRoom = onValue(roomRef, (snapshot) => {
+            if (isClosingRef.current) return;
+
+            if (!snapshot.exists()) {
+                const firstQuestion = quiz.questions[0];
+                const initialData = {
+                    title: quiz.title,
+                    subject: quiz.subject,
+                    totalQuestions: quiz.questions.length,
+                    currentQuestionIndex: 0,
+                    isRevealed: false,
+                    currentQuestion: buildStudentQuestion(firstQuestion, false),
+                    lastActiveAt: serverTimestamp(),
+                    students: {},
+                    answers: []
+                };
+
+                armDisconnect()
+                    .then(() => {
+                        if (isClosingRef.current) return;
+                        return set(roomRef, initialData);
+                    })
+                    .catch((err) => console.error("Init room error:", err));
+            } else {
+                setRoomState(snapshot.val());
+            }
+        });
+
+        return () => {
+            unsubscribeConnected();
+            unsubscribeRoom();
+        };
+    }, [roomId, quiz]);
+
+    const students = roomState?.students || {};
+    const answers = roomState?.answers || {};
+
+    const connectedStudentList = Object.entries(students);
+    const totalStudents = connectedStudentList.length;
+
+    const currentQuestion = quiz ? quiz.questions[currentQuestionIndex] : null;
+    const currentQuestionAnswers = answers[currentQuestionIndex] || {};
+    const answeredCount = Object.keys(currentQuestionAnswers).length;
+
+    const revealAnswers = () => {
+        if (!currentQuestion) return;
+        syncQuestionToRoom(currentQuestionIndex, true);
+    };
+
+    // Auto-reveal when all connected students have submitted an answer
+    useEffect(() => {
+        if (totalStudents > 0 && answeredCount >= totalStudents && !isRevealed) {
+            revealAnswers();
+        }
+    }, [answeredCount, totalStudents, isRevealed]);
+
+    const handleEndSession = async () => {
+        if (endingSession || isClosingRef.current) return;
+        isClosingRef.current = true;
+        setEndingSession(true);
+
+        const roomRef = ref(db, `rooms/${roomId}`);
+        const disconnectRef = onDisconnect(roomRef);
+
+        try {
+            await disconnectRef.cancel();
+            await set(roomRef, null);
+        } catch (err) {
+            console.error("Failed to remove room:", err);
+        } finally {
+            navigate("/");
+        }
+    };
+
+    if (!roomState || !quiz || !currentQuestion) {
+        return (
+            <div style={{ padding: 40, textAlign: "center" }}>
+                Initializing Room...
+            </div>
+        );
     }
-  };
 
-  const joinUrl = `${window.location.origin}/student?room=${roomId}`;
+    const nextQuestion = () => {
+        if (currentQuestionIndex < quiz.questions.length - 1) {
+            syncQuestionToRoom(currentQuestionIndex + 1, false);
+        }
+    };
 
-  return (
-    <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
-      <Header
-        style={{
-          background: "#001529",
-          padding: "0 24px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}
-      >
-        <Title level={3} style={{ color: "white", margin: 0 }}>
-          Quiz
-        </Title>
-        <Space>
-          <Tag color="green" style={{ fontSize: 14, padding: "4px 10px" }}>
-            {totalStudents} Student{totalStudents !== 1 ? "s" : ""} Connected
-          </Tag>
-          <Button
-            danger
-            type="primary"
-            loading={endingSession}
-            onClick={handleEndSession}
-          >
-            End Session
-          </Button>
-        </Space>
-      </Header>
+    const joinUrl = `${window.location.origin}/student?room=${roomId}`;
 
-      <Content style={{ padding: 24, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-        <Row gutter={[24, 24]}>
-          {/* Main Question Panel */}
-          <Col xs={24} md={16}>
-            <Card style={{ marginBottom: 16 }}>
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <div
-                  style={{
+    return (
+        <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
+            <Header
+                style={{
+                    background: "#001529",
+                    padding: "0 24px",
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: isMobile ? "flex-start" : "center",
-                    flexWrap: "wrap",
-                    gap: 8
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: isMobile ? "column" : "row",
-                      alignItems: isMobile ? "flex-start" : "center",
-                      gap: 8
-                    }}
-                  >
-                    {currentQuestion.topicTitle && (
-                      <Tag color="purple">{currentQuestion.topicTitle}</Tag>
-                    )}
-                    <Tag color="blue">
-                      Question {currentQuestionIndex + 1} of {quiz.questions.length}
-                    </Tag>
-                  </div>
-                  <Text type="secondary">
-                    Submissions:{" "}
-                    <strong>
-                      {answeredCount} / {totalStudents}
-                    </strong>
-                  </Text>
-                </div>
-                <Progress
-                  percent={
-                    totalStudents > 0
-                      ? Math.round((answeredCount / totalStudents) * 100)
-                      : 0
-                  }
-                  status="active"
-                />
-
-                <Title level={2} style={{ marginTop: 16 }}>
-                  {currentQuestion.question}
-                </Title>
-              </Space>
-            </Card>
-
-            {/* Answer Options */}
-            {currentQuestion.options.map((opt, index) => {
-              const optionVotes = Object.values(currentQuestionAnswers).filter(
-                (a) => a.selectedOptionId === opt.id
-              ).length;
-              const votePercentage =
-                totalStudents > 0 ? Math.round((optionVotes / totalStudents) * 100) : 0;
-
-              let cardStyle = { marginBottom: 12, borderRadius: 8 };
-              if (isRevealed) {
-                if (opt.isCorrect) {
-                  cardStyle.border = "2px solid #52c41a";
-                  cardStyle.backgroundColor = "#f6ffed";
-                } else if (optionVotes > 0) {
-                  cardStyle.border = "2px solid #ff4d4f";
-                  cardStyle.backgroundColor = "#fff2f0";
-                }
-              }
-
-              return (
-                <Card key={opt.id} style={cardStyle} bodyStyle={{ padding: 16 }}>
-                  <Row align="middle" justify="space-between">
-                    <Col span={18}>
-                      <Space>
-                        <strong style={{ fontSize: 18 }}>
-                          {String.fromCharCode(65 + index)}.
-                        </strong>
-                        <Text style={{ fontSize: 18 }}>{opt.text}</Text>
-                        {isRevealed && opt.isCorrect && (
-                          <Tag color="success">Correct Answer</Tag>
-                        )}
-                      </Space>
-                    </Col>
-                    <Col span={6} style={{ textAlign: "right" }}>
-                      {isRevealed && (
-                        <Text type="secondary">
-                          {optionVotes} votes ({votePercentage}%)
-                        </Text>
-                      )}
-                    </Col>
-                  </Row>
-
-                  {/* Wrong Answer Explanation */}
-                  {isRevealed && !opt.isCorrect && opt.explanation && (
-                    <Alert
-                      type="warning"
-                      showIcon
-                      message="Why it's incorrect:"
-                      description={opt.explanation}
-                      style={{ marginTop: 12 }}
-                    />
-                  )}
-                </Card>
-              );
-            })}
-
-            {/* Control Bar */}
-            <Card style={{ marginTop: 24 }}>
-              <Row justify="space-between" align="middle">
-                <Col>
-                  <Button
-                    disabled={currentQuestionIndex === quiz.questions.length - 1}
-                    onClick={nextQuestion}
-                  >
-                    Next Question
-                  </Button>
-                </Col>
-                <Col>
-                  {!isRevealed ? (
-                    <Button type="primary" danger onClick={revealAnswers}>
-                      Reveal Answers
-                    </Button>
-                  ) : (
-                    <Tag color="gold" style={{ fontSize: 14, padding: "6px 12px" }}>
-                      Answers Revealed
-                    </Tag>
-                  )}
-                </Col>
-              </Row>
-            </Card>
-          </Col>
-
-          {/* QR Code & Connected Roster Side Panel */}
-          <Col xs={24} md={8}>
-            <Card
-              title="Student QR Join Code"
-              style={{ textAlign: "center", marginBottom: 16 }}
-            >
-              <div
-                style={{
-                  background: "#fff",
-                  padding: 16,
-                  display: "inline-block",
-                  borderRadius: 8
+                    alignItems: "center"
                 }}
-              >
-                <QRCodeSVG value={joinUrl} size={180} />
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <Text type="secondary">Scan with mobile camera or visit:</Text>
-                <br />
-                <Text copyable style={{ fontSize: 12 }}>
-                  {joinUrl}
-                </Text>
-              </div>
-            </Card>
-
-            <Card title={`Active Students (${totalStudents})`}>
-              {connectedStudentList.length === 0 ? (
-                <Text type="secondary">Waiting for students to join...</Text>
-              ) : (
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  {connectedStudentList.map(([id, info]) => {
-                    const hasAnswered = !!currentQuestionAnswers[id];
-                    return (
-                      <div
-                        key={id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center"
-                        }}
-                      >
-                        <Text>{info.name || "Anonymous Student"}</Text>
-                        {hasAnswered ? (
-                          <Tag color="green">Answered</Tag>
-                        ) : (
-                          <Tag color="default">Thinking...</Tag>
-                        )}
-                      </div>
-                    );
-                  })}
+            >
+                <Title level={3} style={{ color: "white", margin: 0 }}>
+                    Quiz
+                </Title>
+                <Space>
+                    <Tag color="green" style={{ fontSize: 14, padding: "4px 10px" }}>
+                        {totalStudents} Student{totalStudents !== 1 ? "s" : ""} Connected
+                    </Tag>
+                    <Button
+                        danger
+                        type="primary"
+                        loading={endingSession}
+                        onClick={handleEndSession}
+                    >
+                        End Session
+                    </Button>
                 </Space>
-              )}
-            </Card>
-          </Col>
-        </Row>
-      </Content>
-    </Layout>
-  );
+            </Header>
+
+            <Content style={{ padding: 24, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+                <Row gutter={[24, 24]}>
+                    {/* Main Question Panel */}
+                    <Col xs={24} md={16}>
+                        <Card style={{ marginBottom: 16 }}>
+                            <Space direction="vertical" style={{ width: "100%" }}>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: isMobile ? "flex-start" : "center",
+                                        flexWrap: "wrap",
+                                        gap: 8
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: isMobile ? "column" : "row",
+                                            alignItems: isMobile ? "flex-start" : "center",
+                                            gap: 8
+                                        }}
+                                    >
+                                        {currentQuestion.topicTitle && (
+                                            <Tag color="purple">{currentQuestion.topicTitle}</Tag>
+                                        )}
+                                        <Tag color="blue">
+                                            Question {currentQuestionIndex + 1} of {quiz.questions.length}
+                                        </Tag>
+                                    </div>
+                                    <Text type="secondary">
+                                        Submissions:{" "}
+                                        <strong>
+                                            {answeredCount} / {totalStudents}
+                                        </strong>
+                                    </Text>
+                                </div>
+                                <Progress
+                                    percent={
+                                        totalStudents > 0
+                                            ? Math.round((answeredCount / totalStudents) * 100)
+                                            : 0
+                                    }
+                                    status="active"
+                                />
+
+                                <Title level={2} style={{ marginTop: 16 }}>
+                                    {currentQuestion.question}
+                                </Title>
+                            </Space>
+                        </Card>
+
+                        {/* Answer Options */}
+                        {currentQuestion.options.map((opt, index) => {
+                            const optionVotes = Object.values(currentQuestionAnswers).filter(
+                                (a) => a.selectedOptionId === opt.id
+                            ).length;
+                            const votePercentage =
+                                totalStudents > 0 ? Math.round((optionVotes / totalStudents) * 100) : 0;
+
+                            let cardStyle = { marginBottom: 12, borderRadius: 8 };
+                            if (isRevealed) {
+                                if (opt.isCorrect) {
+                                    cardStyle.border = "2px solid #52c41a";
+                                    cardStyle.backgroundColor = "#f6ffed";
+                                } else if (optionVotes > 0) {
+                                    cardStyle.border = "2px solid #ff4d4f";
+                                    cardStyle.backgroundColor = "#fff2f0";
+                                }
+                            }
+
+                            return (
+                                <Card key={opt.id} style={cardStyle} bodyStyle={{ padding: 16 }}>
+                                    <Row align="middle" justify="space-between">
+                                        <Col span={18}>
+                                            <Space>
+                                                <strong style={{ fontSize: 18 }}>
+                                                    {String.fromCharCode(65 + index)}.
+                                                </strong>
+                                                <Text style={{ fontSize: 18 }}>{opt.text}</Text>
+                                                {isRevealed && opt.isCorrect && (
+                                                    <Tag color="success">Correct Answer</Tag>
+                                                )}
+                                            </Space>
+                                        </Col>
+                                        <Col span={6} style={{ textAlign: "right" }}>
+                                            {isRevealed && (
+                                                <Text type="secondary">
+                                                    {optionVotes} votes ({votePercentage}%)
+                                                </Text>
+                                            )}
+                                        </Col>
+                                    </Row>
+
+                                    {/* Wrong Answer Explanation */}
+                                    {isRevealed && !opt.isCorrect && opt.explanation && (
+                                        <Alert
+                                            type="warning"
+                                            showIcon
+                                            message="Why it's incorrect:"
+                                            description={opt.explanation}
+                                            style={{ marginTop: 12 }}
+                                        />
+                                    )}
+                                </Card>
+                            );
+                        })}
+
+                        {/* Control Bar */}
+                        <Card style={{ marginTop: 24 }}>
+                            <Row justify="space-between" align="middle">
+                                <Col>
+                                    <Button
+                                        disabled={currentQuestionIndex === quiz.questions.length - 1}
+                                        onClick={nextQuestion}
+                                    >
+                                        Next Question
+                                    </Button>
+                                </Col>
+                                <Col>
+                                    {!isRevealed ? (
+                                        <Button type="primary" danger onClick={revealAnswers}>
+                                            Reveal Answers
+                                        </Button>
+                                    ) : (
+                                        <Tag color="gold" style={{ fontSize: 14, padding: "6px 12px" }}>
+                                            Answers Revealed
+                                        </Tag>
+                                    )}
+                                </Col>
+                            </Row>
+                        </Card>
+                    </Col>
+
+                    {/* QR Code & Connected Roster Side Panel */}
+                    <Col xs={24} md={8}>
+                        <Card
+                            title="Student QR Join Code"
+                            style={{ textAlign: "center", marginBottom: 16 }}
+                        >
+                            <div
+                                style={{
+                                    background: "#fff",
+                                    padding: 16,
+                                    display: "inline-block",
+                                    borderRadius: 8
+                                }}
+                            >
+                                <QRCodeSVG value={joinUrl} size={180} />
+                            </div>
+                            <div style={{ marginTop: 12 }}>
+                                <Text type="secondary">Scan with mobile camera or visit:</Text>
+                                <br />
+                                <Text copyable style={{ fontSize: 12 }}>
+                                    {joinUrl}
+                                </Text>
+                            </div>
+                        </Card>
+
+                        <Card title={`Active Students (${totalStudents})`}>
+                            {connectedStudentList.length === 0 ? (
+                                <Text type="secondary">Waiting for students to join...</Text>
+                            ) : (
+                                <Space direction="vertical" style={{ width: "100%" }}>
+                                    {connectedStudentList.map(([id, info]) => {
+                                        const hasAnswered = !!currentQuestionAnswers[id];
+                                        return (
+                                            <div
+                                                key={id}
+                                                style={{
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center"
+                                                }}
+                                            >
+                                                <Text>{info.name || "Anonymous Student"}</Text>
+                                                {hasAnswered ? (
+                                                    <Tag color="green">Answered</Tag>
+                                                ) : (
+                                                    <Tag color="default">Thinking...</Tag>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </Space>
+                            )}
+                        </Card>
+                    </Col>
+                </Row>
+            </Content>
+        </Layout>
+    );
 }
