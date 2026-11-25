@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ref, onValue, update, set, onDisconnect } from "firebase/database";
+import {
+    ref,
+    onValue,
+    update,
+    set,
+    onDisconnect,
+    serverTimestamp
+} from "firebase/database";
 import { db } from "../firebase";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -38,11 +45,12 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
         await update(ref(db, `rooms/${roomId}`), {
             currentQuestionIndex: qIndex,
             isRevealed: revealFlag,
-            currentQuestion: buildStudentQuestion(question, revealFlag)
+            currentQuestion: buildStudentQuestion(question, revealFlag),
+            lastActiveAt: serverTimestamp()
         });
     };
 
-    // 1. Initialize public sanitized room state & cleanup on disconnect / pagehide
+    // Initialize sanitized room state & register server-side disconnect cleanup
     useEffect(() => {
         isClosingRef.current = false;
         const roomRef = ref(db, `rooms/${roomId}`);
@@ -62,6 +70,7 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
                     currentQuestionIndex: 0,
                     isRevealed: false,
                     currentQuestion: buildStudentQuestion(firstQuestion, false),
+                    lastActiveAt: serverTimestamp(),
                     students: {},
                     answers: []
                 };
@@ -71,17 +80,7 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
             }
         });
 
-        const handlePageHide = () => {
-            if (isClosingRef.current) return;
-            isClosingRef.current = true;
-            disconnectRef.cancel();
-            set(roomRef, null);
-        };
-
-        window.addEventListener("pagehide", handlePageHide);
-
         return () => {
-            window.removeEventListener("pagehide", handlePageHide);
             unsubscribe();
         };
     }, [roomId, quiz]);
@@ -101,7 +100,7 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
         syncQuestionToRoom(currentQuestionIndex, true);
     };
 
-    // 2. Auto-reveal logic when all connected students answer
+    // Auto-reveal when all connected students have submitted an answer
     useEffect(() => {
         if (totalStudents > 0 && answeredCount >= totalStudents && !isRevealed) {
             revealAnswers();
@@ -109,9 +108,9 @@ export default function TeacherScreen({ roomId, selectedQuiz = DEFAULT_QUIZ }) {
     }, [answeredCount, totalStudents, isRevealed]);
 
     const handleEndSession = async () => {
-        if (endingSession) return;
-        setEndingSession(true);
+        if (endingSession || isClosingRef.current) return;
         isClosingRef.current = true;
+        setEndingSession(true);
 
         const roomRef = ref(db, `rooms/${roomId}`);
         const disconnectRef = onDisconnect(roomRef);
