@@ -18,14 +18,42 @@ import { socket } from "../socket";
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
+function LivePulseIcon() {
+    return (
+        <span
+            aria-hidden="true"
+            style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 14,
+                height: 14,
+                flexShrink: 0
+            }}
+        >
+            <span className="teacher-live-pulse-ring" />
+            <span
+                style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "#52c41a",
+                    position: "relative",
+                    zIndex: 1
+                }}
+            />
+        </span>
+    );
+}
+
 export default function TeacherScreen({ roomId: initialRoomId, selections = [] }) {
     const navigate = useNavigate();
     const [activeRoomId, setActiveRoomId] = useState(initialRoomId || null);
     const [quizMeta, setQuizMeta] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isRevealed, setIsRevealed] = useState(false);
-    const [studentIds, setStudentIds] = useState([]);
-    const [answersByQuestion, setAnswersByQuestion] = useState({});
+    const [studentCount, setStudentCount] = useState(0);
     const [answeredCount, setAnsweredCount] = useState(0);
     const [optionCounts, setOptionCounts] = useState({});
     const [errorMessage, setErrorMessage] = useState(null);
@@ -41,8 +69,7 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
         });
         setCurrentQuestionIndex(state.currentQuestionIndex ?? 0);
         setIsRevealed(Boolean(state.isRevealed));
-        setStudentIds(state.studentIds || []);
-        setAnswersByQuestion(state.answers || {});
+        setStudentCount(state.studentCount ?? 0);
         setAnsweredCount(state.answeredCount ?? 0);
         setOptionCounts(state.optionCounts || {});
     }, []);
@@ -112,29 +139,13 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
             if (delta.optionCounts) {
                 setOptionCounts(delta.optionCounts);
             }
-            if (delta.questionAnswers) {
-                setAnswersByQuestion((prev) => ({
-                    ...prev,
-                    [delta.currentQuestionIndex]: delta.questionAnswers
-                }));
-            }
         };
 
         const handleAnswerUpdate = ({
-            questionIndex,
-            studentId,
-            answer,
             answeredCount: nextAnsweredCount,
             optionCounts: nextOptionCounts
         }) => {
             if (isClosingRef.current) return;
-            setAnswersByQuestion((prev) => ({
-                ...prev,
-                [questionIndex]: {
-                    ...(prev[questionIndex] || {}),
-                    [studentId]: answer
-                }
-            }));
             if (typeof nextAnsweredCount === "number") {
                 setAnsweredCount(nextAnsweredCount);
             }
@@ -143,9 +154,11 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
             }
         };
 
-        const handleRosterUpdate = ({ studentIds: updatedIds }) => {
+        const handleRosterUpdate = ({ studentCount: nextStudentCount }) => {
             if (isClosingRef.current) return;
-            setStudentIds(updatedIds || []);
+            if (typeof nextStudentCount === "number") {
+                setStudentCount(nextStudentCount);
+            }
         };
 
         socket.on("connect", initRoom);
@@ -163,9 +176,7 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
         };
     }, [initialRoomId, selections, navigate, applyTeacherFullState]);
 
-    const totalStudents = studentIds.length;
     const currentQuestion = quizMeta?.questions?.[currentQuestionIndex] || null;
-    const currentQuestionAnswers = answersByQuestion[currentQuestionIndex] || {};
 
     const revealAnswers = useCallback(() => {
         if (!currentQuestion) return;
@@ -173,10 +184,10 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
     }, [currentQuestion, syncQuestionToRoom, currentQuestionIndex]);
 
     useEffect(() => {
-        if (totalStudents > 0 && answeredCount >= totalStudents && !isRevealed) {
+        if (studentCount > 0 && answeredCount >= studentCount && !isRevealed) {
             revealAnswers();
         }
-    }, [answeredCount, totalStudents, isRevealed, revealAnswers]);
+    }, [answeredCount, studentCount, isRevealed, revealAnswers]);
 
     const handleEndSession = () => {
         if (endingSession || isClosingRef.current) return;
@@ -227,6 +238,30 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
     return (
         <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
             <style>{`
+        @keyframes teacherLiveRadarPulse {
+          0% {
+            transform: scale(0.75);
+            opacity: 0.85;
+          }
+          70% {
+            transform: scale(2.1);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(2.1);
+            opacity: 0;
+          }
+        }
+
+        .teacher-live-pulse-ring {
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #52c41a;
+          animation: teacherLiveRadarPulse 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        }
+
         .topic-question-bar {
           display: flex;
           justify-content: space-between;
@@ -268,12 +303,16 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                     alignItems: "center"
                 }}
             >
-                <Title level={3} style={{ color: "white", margin: 0 }}>
-                    Quiz — Room {activeRoomId}
-                </Title>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    
+                    <Title level={3} style={{ color: "white", margin: 0 }}>
+                        Quiz
+                    </Title>
+                </div>
                 <Space>
+                    <LivePulseIcon />
                     <Tag color="green" style={{ fontSize: 14, padding: "4px 10px" }}>
-                        {totalStudents} Student{totalStudents !== 1 ? "s" : ""} Connected
+                        {studentCount} Student{studentCount !== 1 ? "s" : ""} Connected
                     </Tag>
                     <Button
                         danger
@@ -303,14 +342,14 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                                     <Text type="secondary">
                                         Submissions:{" "}
                                         <strong>
-                                            {answeredCount} / {totalStudents}
+                                            {answeredCount} / {studentCount}
                                         </strong>
                                     </Text>
                                 </div>
                                 <Progress
                                     percent={
-                                        totalStudents > 0
-                                            ? Math.round((answeredCount / totalStudents) * 100)
+                                        studentCount > 0
+                                            ? Math.round((answeredCount / studentCount) * 100)
                                             : 0
                                     }
                                     status="active"
@@ -325,7 +364,7 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                         {currentQuestion.options.map((opt, index) => {
                             const optionVotes = optionCounts[opt.id] ?? 0;
                             const votePercentage =
-                                totalStudents > 0 ? Math.round((optionVotes / totalStudents) * 100) : 0;
+                                studentCount > 0 ? Math.round((optionVotes / studentCount) * 100) : 0;
 
                             let cardStyle = { marginBottom: 12, borderRadius: 8 };
                             if (isRevealed) {
@@ -402,7 +441,7 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                     <Col xs={24} md={8}>
                         <Card
                             title="Student QR Join Code"
-                            style={{ textAlign: "center", marginBottom: 16 }}
+                            style={{ textAlign: "center" }}
                         >
                             <div
                                 style={{
@@ -421,35 +460,6 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                                     {joinUrl}
                                 </Text>
                             </div>
-                        </Card>
-
-                        <Card title={`Active Students (${totalStudents})`}>
-                            {studentIds.length === 0 ? (
-                                <Text type="secondary">Waiting for students to join...</Text>
-                            ) : (
-                                <Space direction="vertical" style={{ width: "100%" }}>
-                                    {studentIds.map((sid, idx) => {
-                                        const hasAnswered = !!currentQuestionAnswers[sid];
-                                        return (
-                                            <div
-                                                key={sid}
-                                                style={{
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    alignItems: "center"
-                                                }}
-                                            >
-                                                <Text>Student #{idx + 1}</Text>
-                                                {hasAnswered ? (
-                                                    <Tag color="green">Answered</Tag>
-                                                ) : (
-                                                    <Tag color="default">Thinking...</Tag>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </Space>
-                            )}
                         </Card>
                     </Col>
                 </Row>

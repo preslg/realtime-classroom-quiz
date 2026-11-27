@@ -13,6 +13,35 @@ const statusTagStyle = {
     display: "inline-block"
 };
 
+function LivePulseIcon() {
+    return (
+        <span
+            aria-hidden="true"
+            style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 14,
+                height: 14,
+                flexShrink: 0
+            }}
+        >
+            <span className="live-pulse-ring" />
+            <span
+                style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "#1677ff",
+                    position: "relative",
+                    zIndex: 1
+                }}
+            />
+        </span>
+    );
+}
+
 export default function StudentScreen({ roomId }) {
     const storageKey = `quiz_student_id_${roomId}`;
     const [studentId, setStudentId] = useState(() =>
@@ -180,23 +209,37 @@ export default function StudentScreen({ roomId }) {
                 boxSizing: "border-box"
             }}
         >
+            <style>{`
+        @keyframes liveRadarPulse {
+          0% {
+            transform: scale(0.75);
+            opacity: 0.85;
+          }
+          70% {
+            transform: scale(2.1);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(2.1);
+            opacity: 0;
+          }
+        }
+
+        .live-pulse-ring {
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #1677ff;
+          animation: liveRadarPulse 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        }
+      `}</style>
+
             <NoticeBar
-                icon={null}
+                icon={<LivePulseIcon />}
                 content={
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 2,
-                            lineHeight: 1.4
-                        }}
-                    >
-                        <span>
-                            ID: <strong>{studentId}</strong>
-                        </span>
-                        <span>
-                            Question {currentQuestionIndex + 1} of {totalQuestions}
-                        </span>
+                    <div style={{ lineHeight: 1.4 }}>
+                        Question {currentQuestionIndex + 1} of {totalQuestions}
                     </div>
                 }
                 color="info"

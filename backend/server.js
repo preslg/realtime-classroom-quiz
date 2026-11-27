@@ -61,8 +61,8 @@ function generateUniqueStudentId(room) {
     return id;
 }
 
-function getStudentIds(room) {
-    return Object.keys(room.students || {});
+function getStudentCount(room) {
+    return Object.keys(room.students || {}).length;
 }
 
 function computeQuestionStats(room, qIdx) {
@@ -100,7 +100,7 @@ function getStudentInitialState(room, studentId) {
         currentQuestionIndex: qIdx,
         isRevealed: room.isRevealed,
         currentQuestion: room.currentStudentQuestion,
-        studentCount: getStudentIds(room).length,
+        studentCount: getStudentCount(room),
         mySelectedOptionId: myAnswer ? myAnswer.selectedOptionId : null
     };
 }
@@ -118,8 +118,7 @@ function getTeacherInitialState(room) {
         totalQuestions: room.totalQuestions,
         currentQuestionIndex: qIdx,
         isRevealed: room.isRevealed,
-        studentIds: getStudentIds(room),
-        answers: room.answers || {},
+        studentCount: getStudentCount(room),
         answeredCount: stats.answeredCount,
         optionCounts: stats.optionCounts
     };
@@ -141,7 +140,6 @@ function emitQuestionSync(room) {
             currentQuestionIndex: qIdx,
             isRevealed: room.isRevealed,
             question: fullQuestion,
-            questionAnswers: room.answers[qIdx] || {},
             answeredCount: stats.answeredCount,
             optionCounts: stats.optionCounts
         });
@@ -149,16 +147,12 @@ function emitQuestionSync(room) {
 }
 
 function emitPresenceUpdate(room) {
-    const studentIds = getStudentIds(room);
-    const studentCount = studentIds.length;
+    const studentCount = getStudentCount(room);
 
     io.to(room.roomId).emit("room:presence", { studentCount });
 
     if (room.teacherSocketId) {
-        io.to(room.teacherSocketId).emit("teacher:roster", {
-            studentIds,
-            studentCount
-        });
+        io.to(room.teacherSocketId).emit("teacher:roster", { studentCount });
     }
 }
 
@@ -199,7 +193,7 @@ app.get("/api/rooms/:roomId", (req, res) => {
         totalQuestions: room.totalQuestions,
         currentQuestionIndex: room.currentQuestionIndex,
         isRevealed: room.isRevealed,
-        studentCount: getStudentIds(room).length
+        studentCount: getStudentCount(room)
     });
 });
 
@@ -409,8 +403,6 @@ io.on("connection", (socket) => {
             const stats = computeQuestionStats(room, qIdx);
             io.to(room.teacherSocketId).emit("teacher:answerUpdate", {
                 questionIndex: qIdx,
-                studentId,
-                answer: record,
                 answeredCount: stats.answeredCount,
                 optionCounts: stats.optionCounts
             });
