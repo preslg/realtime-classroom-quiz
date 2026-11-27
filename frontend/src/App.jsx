@@ -29,62 +29,15 @@ import {
 
 const { Title, Text } = Typography;
 
-function generateRoomId(length = 6) {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let result = "";
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
-function buildCombinedQuizFromSelections(selections) {
-    const questions = [];
-    const titleParts = [];
-
-    selections.forEach((sel, idx) => {
-        const course =
-            COURSES_DATA.find((c) => c.id === sel.courseId) || COURSES_DATA[0];
-        const singleQuiz = buildSessionQuiz(course, sel.topicIndex, sel.mode);
-        titleParts.push(singleQuiz.title);
-        singleQuiz.questions.forEach((q, qIdx) => {
-            questions.push({
-                ...q,
-                id: `${course.id}_${idx}_${q.id || qIdx}`
-            });
-        });
-    });
-
-    const subjects = Array.from(
-        new Set(
-            selections.map((sel) => {
-                const course = COURSES_DATA.find((c) => c.id === sel.courseId);
-                return course?.subject || "General";
-            })
-        )
-    );
-
-    return {
-        id: `session__${Date.now()}`,
-        title:
-            titleParts.length > 0 ? titleParts.join(" + ") : "Classroom Quiz Session",
-        subject: subjects.join(" & "),
-        questions
-    };
-}
-
 function QuizPickerHome() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const roomFromUrl = searchParams.get("room");
 
-    // Only items added via "Add Course" become part of the session quiz
     const [addedSelections, setAddedSelections] = useState([]);
-
-    // Current course/topic configuration form
     const [currentCourseId, setCurrentCourseId] = useState(COURSES_DATA[0].id);
     const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
-    const [currentMode, setCurrentMode] = useState("single"); // "single" | "cumulative"
+    const [currentMode, setCurrentMode] = useState("single");
 
     if (roomFromUrl) {
         return (
@@ -103,10 +56,14 @@ function QuizPickerHome() {
         [currentCourse, currentTopicIndex, currentMode]
     );
 
-    const combinedQuiz = useMemo(
-        () => buildCombinedQuizFromSelections(addedSelections),
-        [addedSelections]
-    );
+    const totalEstimatedQuestions = useMemo(() => {
+        return addedSelections.reduce((sum, sel) => {
+            const course = COURSES_DATA.find((c) => c.id === sel.courseId);
+            if (!course) return sum;
+            const subQuiz = buildSessionQuiz(course, sel.topicIndex, sel.mode);
+            return sum + subQuiz.questions.length;
+        }, 0);
+    }, [addedSelections]);
 
     const handleCourseChange = (courseId) => {
         setCurrentCourseId(courseId);
@@ -139,17 +96,16 @@ function QuizPickerHome() {
     };
 
     const handleStartBigScreen = () => {
-        if (addedSelections.length === 0 || combinedQuiz.questions.length === 0) {
+        if (addedSelections.length === 0 || totalEstimatedQuestions === 0) {
             return;
         }
-        const newRoomId = generateRoomId();
-        navigate(`/teacher/${newRoomId}`, {
-            state: { selectedQuiz: combinedQuiz }
+        navigate("/teacher/new", {
+            state: { selections: addedSelections }
         });
     };
 
     const canStartBigScreen =
-        addedSelections.length > 0 && combinedQuiz.questions.length > 0;
+        addedSelections.length > 0 && totalEstimatedQuestions > 0;
 
     return (
         <div
@@ -249,8 +205,8 @@ function QuizPickerHome() {
                         >
                             <Text strong>Added Courses ({addedSelections.length})</Text>
                             <Tag color={canStartBigScreen ? "geekblue" : "default"}>
-                                {combinedQuiz.questions.length} total question
-                                {combinedQuiz.questions.length !== 1 ? "s" : ""}
+                                {totalEstimatedQuestions} total question
+                                {totalEstimatedQuestions !== 1 ? "s" : ""}
                             </Tag>
                         </div>
 
@@ -310,7 +266,7 @@ function QuizPickerHome() {
                         )}
                     </div>
 
-                    {/* Start Big Screen (disabled until at least one course is added) */}
+                    {/* Start Big Screen */}
                     <Button
                         type="primary"
                         block
@@ -329,13 +285,14 @@ function QuizPickerHome() {
 function TeacherRouteWrapper() {
     const { roomId } = useParams();
     const location = useLocation();
-    const selectedQuiz = location.state?.selectedQuiz;
+    const selections = location.state?.selections;
+    const resolvedRoomId = roomId === "new" ? null : roomId;
 
-    if (!selectedQuiz) {
+    if (!resolvedRoomId && (!Array.isArray(selections) || selections.length === 0)) {
         return <Navigate to="/" replace />;
     }
 
-    return <TeacherScreen roomId={roomId} selectedQuiz={selectedQuiz} />;
+    return <TeacherScreen roomId={resolvedRoomId} selections={selections} />;
 }
 
 function StudentRouteWrapper() {
