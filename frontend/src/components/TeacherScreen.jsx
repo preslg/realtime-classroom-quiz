@@ -303,16 +303,26 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                     alignItems: "center"
                 }}
             >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    
-                    <Title level={3} style={{ color: "white", margin: 0 }}>
-                        Quiz
-                    </Title>
-                </div>
+                <Title level={3} style={{ color: "white", margin: 0 }}>
+                    Quiz
+                </Title>
                 <Space>
                     <LivePulseIcon />
-                    <Tag color="green" style={{ fontSize: 14, padding: "4px 10px" }}>
-                        {studentCount} Student{studentCount !== 1 ? "s" : ""} Connected
+                    <Tag
+                    
+                        color="green"
+                        style={{
+                            fontSize: 14,
+                            padding: "4px 10px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8
+                        }}
+                    >
+                        
+                        <span>
+                            {studentCount} Student{studentCount !== 1 ? "s" : ""} Connected
+                        </span>
                     </Tag>
                     <Button
                         danger
@@ -400,11 +410,11 @@ export default function TeacherScreen({ roomId: initialRoomId, selections = [] }
                                         </Col>
                                     </Row>
 
-                                    {isRevealed && !opt.isCorrect && opt.explanation && (
+                                    {isRevealed && opt.explanation && (
                                         <Alert
-                                            type="warning"
+                                            type={opt.isCorrect ? "success" : "warning"}
                                             showIcon
-                                            message="Why it's incorrect:"
+                                            message={opt.isCorrect ? "Why it's right:" : "Why it's incorrect:"}
                                             description={opt.explanation}
                                             style={{ marginTop: 12 }}
                                         />

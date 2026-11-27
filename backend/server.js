@@ -3,7 +3,7 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const { buildStudentQuestion } = require("./sanitizeQuestion");
-const { generateQuizFromSelections } = require("./coursesData");
+const { getCoursesCatalog, generateQuizFromSelections } = require("./coursesData");
 
 const PORT = process.env.PORT || 4000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
@@ -13,6 +13,14 @@ const ROOM_CLEANUP_INTERVAL_MS = Number(process.env.ROOM_CLEANUP_INTERVAL_MS) ||
 const app = express();
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
+
+app.get("/health", (req, res) => {
+    res.json({ status: "ok", activeRooms: rooms.size });
+});
+
+app.get("/api/courses", (req, res) => {
+    res.json({ courses: getCoursesCatalog() });
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -177,9 +185,7 @@ if (typeof cleanupTimer.unref === "function") {
     cleanupTimer.unref();
 }
 
-app.get("/health", (req, res) => {
-    res.json({ status: "ok", activeRooms: rooms.size });
-});
+
 
 app.get("/api/rooms/:roomId", (req, res) => {
     const room = rooms.get(req.params.roomId);

@@ -1,198 +1,110 @@
-const COURSES_DATA = [
+const COURSES = [
     {
-        id: "bio-101",
-        title: "Biology 101",
-        subject: "Biology",
+        id: "biology",
+        title: "Biology",
+        subject: "Life Sciences",
         topics: [
             {
-                id: "cells",
+                id: "cell-biology",
                 title: "Cell Structure & Organelles",
                 questions: [
                     {
-                        id: "q1",
-                        question: "Which organelle produces most of the cell's ATP?",
+                        id: "bio-cell-1",
+                        question: "Which organelle is primarily responsible for generating ATP via cellular respiration?",
                         options: [
-                            { id: "a", text: "Mitochondrion", isCorrect: true },
+                            {
+                                id: "a",
+                                text: "Mitochondrion",
+                                isCorrect: true,
+                                explanation: "Mitochondria carry out oxidative phosphorylation and the citric acid cycle to produce most of the cell's ATP."
+                            },
                             {
                                 id: "b",
                                 text: "Golgi apparatus",
                                 isCorrect: false,
-                                explanation: "It packages, modifies, and ships proteins and lipids."
-                            },
-                            {
-                                id: "c",
-                                text: "Ribosome",
-                                isCorrect: false,
-                                explanation: "It synthesizes proteins from mRNA."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q2",
-                        question: "Which structure controls what enters and leaves a eukaryotic cell?",
-                        options: [
-                            { id: "a", text: "Plasma membrane", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "Rough endoplasmic reticulum",
-                                isCorrect: false,
-                                explanation: "It folds and transports secretory and membrane proteins."
+                                explanation: "The Golgi apparatus modifies, sorts, and packages proteins and lipids rather than acting as the main ATP hub."
                             },
                             {
                                 id: "c",
                                 text: "Lysosome",
                                 isCorrect: false,
-                                explanation: "It breaks down waste and cellular debris."
+                                explanation: "Lysosomes contain hydrolytic enzymes for breaking down waste and cellular debris."
                             }
                         ]
                     },
                     {
-                        id: "q3",
-                        question: "Which feature is found in plant cells but typically absent in animal cells?",
-                        options: [
-                            { id: "a", text: "Cell wall", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "Mitochondria",
-                                isCorrect: false,
-                                explanation: "Both plant and animal cells use mitochondria for cellular respiration."
-                            },
-                            {
-                                id: "c",
-                                text: "Nucleus",
-                                isCorrect: false,
-                                explanation: "Both plant and animal cells are eukaryotic and contain a nucleus."
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: "photosynthesis",
-                title: "Photosynthesis",
-                questions: [
-                    {
-                        id: "q1",
-                        question: "Where do the light-dependent reactions take place?",
-                        options: [
-                            { id: "a", text: "Thylakoid membrane", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "Stroma",
-                                isCorrect: false,
-                                explanation: "The Calvin cycle occurs in the stroma."
-                            },
-                            {
-                                id: "c",
-                                text: "Outer chloroplast membrane",
-                                isCorrect: false,
-                                explanation: "Chlorophyll complexes are embedded in the thylakoid membrane."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q2",
-                        question: "Which gas is released as a byproduct when water is split during light reactions?",
-                        options: [
-                            { id: "a", text: "Oxygen (O2)", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "Carbon dioxide (CO2)",
-                                isCorrect: false,
-                                explanation: "CO2 is taken in and fixed during the Calvin cycle rather than released by splitting water."
-                            },
-                            {
-                                id: "c",
-                                text: "Nitrogen (N2)",
-                                isCorrect: false,
-                                explanation: "Splitting water (photolysis) produces electrons, protons, and oxygen."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q3",
-                        question: "Which enzyme fixes carbon dioxide into an organic molecule during the Calvin cycle?",
-                        options: [
-                            { id: "a", text: "RuBisCO", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "DNA polymerase",
-                                isCorrect: false,
-                                explanation: "DNA polymerase synthesizes new DNA strands during replication."
-                            },
-                            {
-                                id: "c",
-                                text: "Amylase",
-                                isCorrect: false,
-                                explanation: "Amylase breaks down starches into simpler sugars."
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: "genetics",
-                title: "Mendelian Genetics",
-                questions: [
-                    {
-                        id: "q1",
-                        question:
-                            "What is the expected phenotypic ratio of a monohybrid Aa x Aa cross with complete dominance?",
-                        options: [
-                            { id: "a", text: "3:1", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "1:1",
-                                isCorrect: false,
-                                explanation: "1:1 is expected from a test cross (Aa x aa)."
-                            },
-                            {
-                                id: "c",
-                                text: "1:2:1",
-                                isCorrect: false,
-                                explanation: "1:2:1 is the genotypic ratio (AA : Aa : aa), not the dominant/recessive phenotypic ratio."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q2",
-                        question: "Which term describes an organism with two identical alleles for a gene?",
-                        options: [
-                            { id: "a", text: "Homozygous", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "Heterozygous",
-                                isCorrect: false,
-                                explanation: "Heterozygous means having two different alleles (such as Aa)."
-                            },
-                            {
-                                id: "c",
-                                text: "Phenotype",
-                                isCorrect: false,
-                                explanation: "Phenotype refers to observable traits rather than allele combination."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q3",
-                        question: "What does Mendel's Law of Segregation state?",
+                        id: "bio-cell-2",
+                        question: "Which structure controls what enters and leaves a eukaryotic cell?",
                         options: [
                             {
                                 id: "a",
-                                text: "Allele pairs separate during gamete formation so each gamete carries one allele",
+                                text: "Plasma membrane",
                                 isCorrect: true
                             },
                             {
                                 id: "b",
-                                text: "Linked genes on the same chromosome always assort independently",
+                                text: "Ribosome",
                                 isCorrect: false,
-                                explanation: "Genes close together on the same chromosome tend to be inherited together."
+                                explanation: "Ribosomes synthesize proteins; selective transport across the cell boundary is handled by the plasma membrane."
                             },
                             {
                                 id: "c",
-                                text: "Recessive alleles always mask dominant alleles",
+                                text: "Nucleolus",
                                 isCorrect: false,
-                                explanation: "Dominant alleles mask recessive alleles in heterozygotes."
+                                explanation: "The nucleolus is inside the nucleus and assembles ribosomal RNA subunits."
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: "genetics-dna",
+                title: "Genetics & DNA Replication",
+                questions: [
+                    {
+                        id: "bio-gen-1",
+                        question: "Which enzyme synthesizes new DNA strands by adding nucleotides to a 3' hydroxyl end?",
+                        options: [
+                            {
+                                id: "a",
+                                text: "DNA helicase",
+                                isCorrect: false,
+                                explanation: "Helicase unwinds and separates the two DNA strands ahead of the replication fork."
+                            },
+                            {
+                                id: "b",
+                                text: "DNA polymerase",
+                                isCorrect: true,
+                                explanation: "DNA polymerase builds complementary strands in the 5' to 3' direction by attaching nucleotides to a free 3'-OH group."
+                            },
+                            {
+                                id: "c",
+                                text: "DNA ligase",
+                                isCorrect: false,
+                                explanation: "DNA ligase joins nicks/Okazaki fragments together after synthesis."
+                            }
+                        ]
+                    },
+                    {
+                        id: "bio-gen-2",
+                        question: "In DNA base pairing, adenine pairs with which base?",
+                        options: [
+                            {
+                                id: "a",
+                                text: "Guanine",
+                                isCorrect: false,
+                                explanation: "Cytosine pairs with guanine via three hydrogen bonds in DNA."
+                            },
+                            {
+                                id: "b",
+                                text: "Thymine",
+                                isCorrect: true
+                            },
+                            {
+                                id: "c",
+                                text: "Uracil",
+                                isCorrect: false,
+                                explanation: "Uracil replaces thymine in RNA rather than standard double-stranded DNA."
                             }
                         ]
                     }
@@ -201,169 +113,218 @@ const COURSES_DATA = [
         ]
     },
     {
-        id: "cs-101",
-        title: "Intro to Computer Science",
-        subject: "Computer Science",
+        id: "js-fundamentals",
+        title: "JavaScript Fundamentals",
+        subject: "Programming",
         topics: [
             {
-                id: "binary",
-                title: "Number Systems & Binary",
+                id: "scope-closures",
+                title: "Scope & Closures",
                 questions: [
                     {
-                        id: "q1",
-                        question: "What is the decimal value of binary 1010?",
+                        id: "js-sc-1",
+                        question: "Which declaration is block-scoped?",
                         options: [
-                            { id: "a", text: "10", isCorrect: true },
-                            { id: "b", text: "8", isCorrect: false, explanation: "Binary 1000 equals 8." },
-                            { id: "c", text: "12", isCorrect: false, explanation: "Binary 1100 equals 12." }
-                        ]
-                    },
-                    {
-                        id: "q2",
-                        question: "What is the hexadecimal representation of binary 1111 0010?",
-                        options: [
-                            { id: "a", text: "0xF2", isCorrect: true },
+                            {
+                                id: "a",
+                                text: "var",
+                                isCorrect: false,
+                                explanation: "var is function-scoped (or global), not limited to { } blocks."
+                            },
                             {
                                 id: "b",
-                                text: "0xE2",
-                                isCorrect: false,
-                                explanation: "1111 in binary is 15 in decimal, which is F in hexadecimal (14 is E)."
+                                text: "const",
+                                isCorrect: true,
+                                explanation: "const is scoped to the nearest enclosing { } block and prevents rebinding."
                             },
                             {
                                 id: "c",
-                                text: "0xF4",
+                                text: "function",
                                 isCorrect: false,
-                                explanation: "0010 in binary equals 2 in decimal, not 4."
+                                explanation: "Function declarations are hoisted and block-scoped only in strict mode, unlike const."
                             }
                         ]
                     },
                     {
-                        id: "q3",
-                        question: "How many distinct values can a single byte (8 bits) represent?",
+                        id: "js-sc-2",
+                        question: "What does typeof [] return in JavaScript?",
                         options: [
-                            { id: "a", text: "256", isCorrect: true },
+                            {
+                                id: "a",
+                                text: "\"array\"",
+                                isCorrect: false,
+                                explanation: "JavaScript does not have a separate 'array' primitive type; use Array.isArray() instead."
+                            },
                             {
                                 id: "b",
-                                text: "128",
-                                isCorrect: false,
-                                explanation: "7 bits represent 128 values; 8 bits represent 2^8 = 256 values."
+                                text: "\"object\"",
+                                isCorrect: true
                             },
                             {
                                 id: "c",
-                                text: "64",
+                                text: "\"list\"",
                                 isCorrect: false,
-                                explanation: "6 bits represent 64 values."
+                                explanation: "\"list\" is not a valid return value of typeof in JavaScript."
+                            }
+                        ]
+                    },
+                    {
+                        id: "js-sc-3",
+                        question: "What is a closure in JavaScript?",
+                        options: [
+                            {
+                                id: "a",
+                                text: "A function bundled with references to its lexical environment",
+                                isCorrect: true,
+                                explanation: "A closure lets an inner function access variables from its outer scope even after the outer function returns."
+                            },
+                            {
+                                id: "b",
+                                text: "A block statement that immediately stops execution",
+                                isCorrect: false,
+                                explanation: "Closures are about lexical variable retention across scopes, not halting execution."
+                            },
+                            {
+                                id: "c",
+                                text: "A method that converts an object into JSON",
+                                isCorrect: false,
+                                explanation: "JSON serialization uses JSON.stringify(), not closures."
                             }
                         ]
                     }
                 ]
             },
             {
-                id: "complexity",
-                title: "Big-O Notation",
+                id: "async-event-loop",
+                title: "Async & Event Loop",
                 questions: [
                     {
-                        id: "q1",
-                        question: "What is the worst-case time complexity of binary search on a sorted array of size n?",
-                        options: [
-                            { id: "a", text: "O(log n)", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "O(n)",
-                                isCorrect: false,
-                                explanation: "Linear search takes O(n); binary search halves the search space each step."
-                            },
-                            {
-                                id: "c",
-                                text: "O(n log n)",
-                                isCorrect: false,
-                                explanation: "A single binary search runs in logarithmic time, O(log n)."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q2",
-                        question: "Which time complexity describes a nested loop over the same array of length n?",
-                        options: [
-                            { id: "a", text: "O(n^2)", isCorrect: true },
-                            {
-                                id: "b",
-                                text: "O(1)",
-                                isCorrect: false,
-                                explanation: "O(1) means constant time independent of input size n."
-                            },
-                            {
-                                id: "c",
-                                text: "O(log n)",
-                                isCorrect: false,
-                                explanation: "Iterating over all n elements inside another loop of n elements scales quadratically."
-                            }
-                        ]
-                    },
-                    {
-                        id: "q3",
-                        question: "What does Big-O notation primarily describe?",
+                        id: "js-el-1",
+                        question: "Which queue runs first after the current call stack finishes?",
                         options: [
                             {
                                 id: "a",
-                                text: "How an algorithm's runtime or memory grows as input size increases",
+                                text: "Microtask queue (e.g., Promise callbacks)",
+                                isCorrect: true,
+                                explanation: "The event loop drains the microtask queue completely before picking the next macrotask."
+                            },
+                            {
+                                id: "b",
+                                text: "Macrotask queue (e.g., setTimeout)",
+                                isCorrect: false,
+                                explanation: "Macrotasks like setTimeout wait until microtasks queued during the turn have finished."
+                            },
+                            {
+                                id: "c",
+                                text: "DOM paint queue",
+                                isCorrect: false,
+                                explanation: "Microtasks execute before browser rendering/paint steps in each turn."
+                            }
+                        ]
+                    },
+                    {
+                        id: "js-el-2",
+                        question: "What does an async function always return?",
+                        options: [
+                            {
+                                id: "a",
+                                text: "A Promise",
                                 isCorrect: true
                             },
                             {
                                 id: "b",
-                                text: "The exact number of milliseconds an algorithm takes on a specific CPU",
+                                text: "A callback function",
                                 isCorrect: false,
-                                explanation: "Big-O captures asymptotic growth rate rather than hardware wall-clock time."
+                                explanation: "async functions wrap return values in a resolved Promise (or return a rejected Promise on throw)."
                             },
                             {
                                 id: "c",
-                                text: "Whether code follows clean formatting conventions",
+                                text: "undefined unless await is used",
                                 isCorrect: false,
-                                explanation: "Big-O measures algorithmic efficiency and scaling."
+                                explanation: "Even without await, an async function returns a Promise resolving to its return value."
                             }
                         ]
                     }
                 ]
-            },
+            }
+        ]
+    },
+    {
+        id: "choveshki-mozak",
+        title: "Човешкия Мозък",
+        subject: "Биология",
+        topics: [
             {
-                id: "data-structures",
-                title: "Core Data Structures",
+                id: "grubnachen-mozuk",
+                title: "Гръбначен Мозък",
                 questions: [
                     {
-                        id: "q1",
-                        question: "Which ordering principle does a stack follow?",
+                        id: "human-brain-spinal-1",
+                        question: "Къде сивото мозъчно вещество е разположено по-навътре (медиално), а бялото вещество е отвън?",
                         options: [
-                            { id: "a", text: "LIFO (Last-In, First-Out)", isCorrect: true },
                             {
-                                id: "b",
-                                text: "FIFO (First-In, First-Out)",
-                                isCorrect: false,
-                                explanation: "FIFO describes a queue rather than a stack."
+                                id: "a",
+                                text: "В гръбначния мозък",
+                                isCorrect: true,
+                                explanation: "В гръбначния мозък сивото вещество е разположено във вътрешността, а бялото вещество го обгръща."
                             },
                             {
-                                id: "c",
-                                text: "Sorted key order",
+                                id: "b",
+                                text: "В големите мозъчни полукълба",
                                 isCorrect: false,
-                                explanation: "Stacks push and pop from the top regardless of key values."
+                                explanation: "В големите мозъчни полукълба е обратно – сивото вещество образува мозъчната кора, а бялото вещество се намира във вътрешността."
                             }
                         ]
                     },
                     {
-                        id: "q2",
-                        question: "What is the average-case lookup time for a well-distributed hash table?",
+                        id: "human-brain-spinal-2",
+                        question: "Сивото вещество в гръбначния мозък симетрично ли е спрямо лявата и дясната страна?",
+                        image: "grubnachen_mozuk.jpg",
                         options: [
-                            { id: "a", text: "O(1)", isCorrect: true },
                             {
-                                id: "b",
-                                text: "O(n)",
-                                isCorrect: false,
-                                explanation: "Hash tables compute a bucket index directly from the key in constant average time."
+                                id: "a",
+                                text: "Вярно",
+                                isCorrect: true
                             },
                             {
-                                id: "c",
-                                text: "O(n!)",
+                                id: "b",
+                                text: "Невярно",
+                                isCorrect: false
+                            }
+                        ]
+                    },
+                    {
+                        id: "human-brain-spinal-3",
+                        question: "Коя част на сивото вещество достига до ръба на гръбначния мозък?",
+                        image: "grubnachen_mozuk.jpg",
+                        options: [
+                            {
+                                id: "a",
+                                text: "Дорзална (задна)",
+                                isCorrect: true
+                            },
+                            {
+                                id: "b",
+                                text: "Вентрална (предна)",
+                                isCorrect: false
+                            }
+                        ]
+                    },
+                    {
+                        id: "human-brain-spinal-4",
+                        question: "Дорзалните (задните) рога в гръбначния мозък са местата, където навлизат кои неврони?",
+                        options: [
+                            {
+                                id: "a",
+                                text: "Сетивните неврони",
+                                isCorrect: true,
+                                explanation: "Сетивните неврони навлизат в гръбначния мозък отзад, през дорзалните (задните) коренчета."
+                            },
+                            {
+                                id: "b",
+                                text: "Двигателните неврони",
                                 isCorrect: false,
-                                explanation: "Factorial time grows far faster than hash table lookups."
+                                explanation: "Двигателните неврони се намират в предните (вентралните) рога и изпращат сигнали към периферията, за да управляват определени мускулни групи."
                             }
                         ]
                     }
@@ -373,86 +334,101 @@ const COURSES_DATA = [
     }
 ];
 
-function formatTopicTitle(topic, index) {
-    return `${topic.title}, topic ${index + 1}`;
+function getCoursesCatalog() {
+    return COURSES.map((course) => ({
+        id: course.id,
+        title: course.title,
+        subject: course.subject,
+        topics: (course.topics || []).map((topic) => ({
+            id: topic.id,
+            title: topic.title,
+            questionCount: (topic.questions || []).length
+        }))
+    }));
 }
 
-function buildSessionQuiz(course, topicIndex, mode = "single") {
-    const safeIndex = Math.max(0, Math.min(topicIndex, course.topics.length - 1));
-    const includedTopics = course.topics
-        .map((topic, idx) => ({
-            ...topic,
-            topicNumber: idx + 1,
-            displayTitle: formatTopicTitle(topic, idx)
-        }))
-        .slice(mode === "cumulative" ? 0 : safeIndex, safeIndex + 1);
+function normalizeSelectionTokens(selections = []) {
+    const tokens = new Set();
 
-    const mergedQuestions = includedTopics.flatMap((topic) =>
-        topic.questions.map((q, idx) => ({
-            ...q,
-            courseTitle: course.title,
-            topicTitle: topic.displayTitle,
-            id: `${course.id}_${topic.id}_${q.id || idx}`
-        }))
-    );
+    for (const sel of selections) {
+        if (!sel) continue;
+        if (typeof sel === "string") {
+            tokens.add(sel.trim());
+        } else if (typeof sel === "object") {
+            if (sel.topicId) tokens.add(String(sel.topicId).trim());
+            if (sel.courseId && sel.topicId) {
+                tokens.add(`${String(sel.courseId).trim()}:${String(sel.topicId).trim()}`);
+            }
+            if (!sel.topicId && sel.courseId) {
+                tokens.add(String(sel.courseId).trim());
+            }
+        }
+    }
 
-    const chosenTopic = course.topics[safeIndex];
-    const chosenDisplayTitle = formatTopicTitle(chosenTopic, safeIndex);
-
-    return {
-        id: `${course.id}__${chosenTopic.id}__${mode}`,
-        title:
-            mode === "cumulative"
-                ? `${course.title}: Through ${chosenDisplayTitle}`
-                : `${course.title}: ${chosenDisplayTitle}`,
-        subject: course.subject,
-        questions: mergedQuestions
-    };
+    return tokens;
 }
 
 function generateQuizFromSelections(selections = []) {
-    const questions = [];
-    const titleParts = [];
+    const tokens = normalizeSelectionTokens(selections);
+    const matchedQuestions = [];
+    const matchedCourseTitles = new Set();
+    const matchedSubjects = new Set();
+    const seenQuestionIds = new Set();
 
-    selections.forEach((sel, idx) => {
-        const course = COURSES_DATA.find((c) => c.id === sel.courseId);
-        if (!course) return;
+    for (const course of COURSES) {
+        const courseMatched = tokens.has(course.id);
 
-        const singleQuiz = buildSessionQuiz(
-            course,
-            Number(sel.topicIndex) || 0,
-            sel.mode === "cumulative" ? "cumulative" : "single"
-        );
+        for (const topic of course.topics || []) {
+            const compositeKey = `${course.id}:${topic.id}`;
+            const topicMatched =
+                courseMatched || tokens.has(topic.id) || tokens.has(compositeKey);
 
-        titleParts.push(singleQuiz.title);
-        singleQuiz.questions.forEach((q, qIdx) => {
-            questions.push({
-                ...q,
-                id: `${course.id}_${idx}_${q.id || qIdx}`
-            });
-        });
-    });
+            if (!topicMatched) continue;
 
-    const subjects = Array.from(
-        new Set(
-            selections
-                .map((sel) => COURSES_DATA.find((c) => c.id === sel.courseId)?.subject)
-                .filter(Boolean)
-        )
-    );
+            matchedCourseTitles.add(course.title);
+            if (course.subject) matchedSubjects.add(course.subject);
+
+            for (const q of topic.questions || []) {
+                if (seenQuestionIds.has(q.id)) continue;
+                seenQuestionIds.add(q.id);
+
+                matchedQuestions.push({
+                    ...q,
+                    courseId: course.id,
+                    courseTitle: course.title,
+                    topicId: topic.id,
+                    topicTitle: topic.title,
+                    options: (q.options || []).map((opt) => ({ ...opt }))
+                });
+            }
+        }
+    }
+
+    const courseList = Array.from(matchedCourseTitles);
+    const title =
+        courseList.length === 1
+            ? `${courseList[0]} Quiz`
+            : courseList.length > 1
+                ? `${courseList.join(" & ")} Quiz`
+                : "Classroom Quiz";
+
+    const subjectList = Array.from(matchedSubjects);
+    const subject =
+        subjectList.length === 1
+            ? subjectList[0]
+            : subjectList.length > 1
+                ? subjectList.join(", ")
+                : "General";
 
     return {
-        id: `session__${Date.now()}`,
-        title:
-            titleParts.length > 0 ? titleParts.join(" + ") : "Classroom Quiz Session",
-        subject: subjects.length > 0 ? subjects.join(" & ") : "General",
-        questions
+        title,
+        subject,
+        questions: matchedQuestions
     };
 }
 
 module.exports = {
-    COURSES_DATA,
-    formatTopicTitle,
-    buildSessionQuiz,
+    COURSES,
+    getCoursesCatalog,
     generateQuizFromSelections
 };

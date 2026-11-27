@@ -1,3 +1,7 @@
+create a .env.development file and put
+VITE_API_URL=http://localhost:4000
+
+
 # gemini link
 
 https://gemini.google.com/app/5d45b8f9b06770cd?hl=bg
